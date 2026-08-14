@@ -26,8 +26,11 @@ STOCKS = [
     {'symbol': 'COHR', 'folder': 'COHR_光学材料', 'name': 'Coherent'},
 ]
 
-# 项目根目录
+# 项目根目录（兼容本地和GitHub Actions环境）
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+if not os.path.exists(os.path.join(PROJECT_ROOT, 'MU_美光')):
+    # GitHub Actions环境中，工作目录就是项目根目录
+    PROJECT_ROOT = os.getcwd()
 
 
 def calculate_rsi(df, period=14):
