@@ -21,13 +21,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas numpy requests openpyxl yfinance
+          pip install pandas numpy requests openpyxl yfinance fredapi newsapi-python beautifulsoup4 lxml
 
       - name: Update stock data
         run: python fetch_my_stocks.py
 
       - name: Run analysis
-        run: python daily_analysis.py
+        run: python daily_stock_report.py
         env:
           # 企业微信Webhook URL（在GitHub仓库Settings → Secrets中配置）
           WECHAT_WEBHOOK: ${{ secrets.WECHAT_WEBHOOK }}
+          # API Keys（在GitHub仓库Settings → Secrets中配置）
+          NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}

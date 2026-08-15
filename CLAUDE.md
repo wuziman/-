@@ -179,9 +179,75 @@ stock-investment/
 ├── strategies/        # 策略模块
 ├── risk/              # 风控模块
 ├── utils/             # 工具函数
+│   ├── stock_analysis.py  # 股票综合分析模块（四维度）
+│   └── ...
+├── config/            # 配置文件（不提交到GitHub）
+│   └── config.json    # API Keys和股票列表
+├── reports/           # 分析报告（自动生成）
 ├── CLAUDE.md          # 项目配置（本文件）
+├── SETUP.md           # 配置指南
 ├── fetch_my_stocks.py # 数据获取脚本
-├── analyze_my_stocks.py # 分析脚本
+├── daily_stock_report.py # 每日分析报告（新）
+├── daily_analysis.py  # 旧版分析脚本
 ├── main.py            # 主程序
-└── README.md          # 使用说明
+├── requirements.txt   # 依赖列表
+└── .gitignore         # Git忽略文件
 ```
+
+## API Keys配置
+
+### 本地配置
+在 `config/config.json` 中配置API Keys（已添加到.gitignore，不会提交到GitHub）：
+```json
+{
+  "api_keys": {
+    "newsapi": "your_newsapi_key",
+    "fred": "your_fred_key"
+  }
+}
+```
+
+### GitHub Actions配置
+在GitHub仓库的 **Settings → Secrets and variables → Actions** 中添加：
+- `WECHAT_WEBHOOK`：企业微信Webhook URL
+- `NEWSAPI_KEY`：NewsAPI Key
+- `FRED_API_KEY`：FRED API Key
+
+## 数据获取方式
+
+### API来源
+- **技术面**：Yahoo Finance（yfinance）
+- **消息面**：NewsAPI
+- **宏观面**：FRED API
+- **事件驱动**：网页抓取
+
+### 网页抓取来源（交叉验证）
+- **消息面**：Yahoo Finance、Google News、新浪财经
+- **宏观面**：东方财富、新浪财经
+- **事件驱动**：Investing.com、东方财富
+
+## 分析报告格式
+
+### 推荐排序
+```
+【推荐排序】
+1. MU 美光 - 强烈推荐 - 评分：8.5/10 🟢🟢🟢
+   建议买入：$XXX（支撑位）
+   止盈位：$XXX（阻力位）
+   止损位：$XXX（支撑位）
+```
+
+### 评分权重
+- 技术面：40%
+- 消息面：30%
+- 宏观面：15%
+- 事件驱动：15%
+
+### 推荐等级
+| 评分 | 等级 | 操作 |
+|------|------|------|
+| ≥8.0 | 强烈推荐 | 买入 |
+| ≥6.5 | 推荐 | 买入 |
+| ≥5.0 | 中性 | 持有 |
+| ≥3.5 | 谨慎 | 观望 |
+| <3.5 | 不推荐 | 卖出 |
