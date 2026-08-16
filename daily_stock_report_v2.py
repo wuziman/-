@@ -1,6 +1,6 @@
 """
-每日股票分析报告
-使用新的四维度分析模块
+每日股票分析报告 - 研究验证版（方案1）
+使用学术研究验证的多因子权重
 """
 
 import json
@@ -61,14 +61,14 @@ def send_wechat_notification(report: str):
 
 def format_report(results: list) -> str:
     """
-    格式化分析报告（适中版）
-    按推荐程度排序，包含价格点位
+    格式化分析报告（研究验证版）
+    使用学术研究验证的多因子权重
     """
     # 按综合评分排序（从高到低）
     sorted_results = sorted(results, key=lambda x: x['scores']['total'], reverse=True)
 
     report = []
-    report.append(f"【股票日报】{datetime.now().strftime('%m-%d %H:%M')}")
+    report.append(f"【股票日报-研究验证版】{datetime.now().strftime('%m-%d %H:%M')}")
     report.append("=" * 40)
 
     for i, result in enumerate(sorted_results, 1):
@@ -77,6 +77,7 @@ def format_report(results: list) -> str:
         score = result['scores']['total']
         recommendation = result['recommendation']
         price_levels = result['price_levels']
+        factor_scores = result.get('factor_scores', {})
 
         # 推荐等级图标
         if recommendation['level'] == '强烈推荐':
@@ -95,9 +96,19 @@ def format_report(results: list) -> str:
         report.append(f"   买入: ${price_levels['buy_price']}")
         report.append(f"   止盈: ${price_levels['take_profit']}")
         report.append(f"   止损: ${price_levels['stop_loss']}")
+
+        # 显示因子得分
+        if factor_scores:
+            tech = factor_scores.get('technical', 0)
+            news = factor_scores.get('news', 0)
+            macro = factor_scores.get('macro', 0)
+            event = factor_scores.get('event', 0)
+            report.append(f"   因子: 技{tech} 新{news} 宏{macro} 事{event}")
+
         report.append("")
 
     report.append("=" * 40)
+    report.append("权重: 技术35% + 消息15% + 宏观25% + 事件25%")
     report.append("仅供参考，投资有风险")
 
     return "\n".join(report)
@@ -105,7 +116,7 @@ def format_report(results: list) -> str:
 
 def main():
     """主函数"""
-    print("开始每日股票分析...")
+    print("开始每日股票分析（研究验证版）...")
     print("=" * 60)
 
     # 初始化分析器
@@ -117,14 +128,14 @@ def main():
             config = json.load(f)
             stocks = config.get("stocks", [])
     except Exception as e:
-        print(f"❌ 加载配置失败: {e}")
+        print(f"加载配置失败: {e}")
         return
 
-    # 分析所有股票
+    # 分析所有股票（使用研究验证版模式）
     results = []
     for stock in stocks:
         try:
-            result = analyzer.analyze_stock(stock['code'], stock['name'])
+            result = analyzer.analyze_stock(stock['code'], stock['name'], mode="research")
             results.append(result)
         except Exception as e:
             print(f"分析 {stock['code']} 失败: {e}")
@@ -135,7 +146,7 @@ def main():
     # 保存报告
     report_dir = Path("reports")
     report_dir.mkdir(exist_ok=True)
-    report_file = report_dir / f"daily_report_{datetime.now().strftime('%Y%m%d')}.txt"
+    report_file = report_dir / f"daily_report_v2_{datetime.now().strftime('%Y%m%d')}.txt"
 
     with open(report_file, 'w', encoding='utf-8') as f:
         f.write(report)

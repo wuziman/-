@@ -33,13 +33,16 @@ class StockAnalyzer:
             print(f"配置文件未找到: {config_path}")
             return {}
 
-    def analyze_stock(self, stock_code: str, stock_name: str) -> Dict:
+    def analyze_stock(self, stock_code: str, stock_name: str, mode: str = "simple") -> Dict:
         """
         综合分析单只股票
         返回：评分、推荐等级、建议买入价、止盈位、止损位
+
+        参数：
+            mode: "simple"（简单版，只用技术面）或 "research"（研究验证版，四维度）
         """
         print(f"\n{'='*60}")
-        print(f"正在分析: {stock_code} {stock_name}")
+        print(f"正在分析: {stock_code} {stock_name} [{mode}版]")
         print(f"{'='*60}")
 
         # 1. 技术面分析
@@ -58,13 +61,28 @@ class StockAnalyzer:
         event_score, event_details = self._analyze_events(stock_code, stock_name)
         print(f"事件驱动分析完成: {event_score}/10")
 
-        # 计算综合评分（加权平均）
-        total_score = (
-            tech_score * 0.4 +  # 技术面40%
-            news_score * 0.3 +  # 消息面30%
-            macro_score * 0.15 +  # 宏观面15%
-            event_score * 0.15  # 事件驱动15%
-        )
+        # 计算综合评分（根据模式选择权重）
+        if mode == "research":
+            # 研究验证版：使用学术研究验证的权重
+            # 来源：Alpha Learning研究
+            # 技术面35% + 消息面15% + 宏观面25% + 事件驱动25%
+            total_score = (
+                tech_score * 0.35 +  # 技术面35%
+                news_score * 0.15 +  # 消息面15%
+                macro_score * 0.25 +  # 宏观面25%
+                event_score * 0.25  # 事件驱动25%
+            )
+            print(f"使用研究验证权重: 技35% + 新15% + 宏25% + 事25%")
+        else:
+            # 简单版：四维度加权（保持原有逻辑）
+            # 技术面40% + 消息面30% + 宏观面15% + 事件驱动15%
+            total_score = (
+                tech_score * 0.4 +  # 技术面40%
+                news_score * 0.3 +  # 消息面30%
+                macro_score * 0.15 +  # 宏观面15%
+                event_score * 0.15  # 事件驱动15%
+            )
+            print(f"使用简单版权重: 技40% + 新30% + 宏15% + 事15%")
 
         # 确定推荐等级
         recommendation = self._get_recommendation(total_score)
@@ -342,31 +360,128 @@ class StockAnalyzer:
 
     def _calculate_price_levels(self, stock_code: str, tech_details: Dict) -> Dict:
         """
-        计算价格点位
-        基于技术面支撑/阻力位
+        计算价格点位（专业优化版）
+        基于最佳实践：
+        1. 买入点位：斐波那契回撤位 + 最大回调限制（5-8%）
+        2. 止损：ATR动态止损（1.5倍ATR）或支撑位
+        3. 止盈：风险回报比1:2 或 阻力位
         """
         try:
             current_price = tech_details.get("current_price", 0)
+            ma20 = tech_details.get("ma20", current_price)
+            ma50 = tech_details.get("ma50", current_price)
+            bb_lower = tech_details.get("bb_lower", current_price * 0.9)
+            bb_upper = tech_details.get("bb_upper", current_price * 1.1)
             support_levels = tech_details.get("support_levels", [])
             resistance_levels = tech_details.get("resistance_levels", [])
 
-            # 建议买入价：当前支撑位或当前价下浮5%
-            if support_levels:
-                buy_price = min(support_levels)
-            else:
-                buy_price = round(current_price * 0.95, 2)
+            # 计算ATR（使用布林带宽度近似）
+            atr_approx = (bb_upper - bb_lower) / 4  # 布林带宽度/4 ≈ ATR
 
-            # 止盈位：技术阻力位或当前价上浮10%
+            # ============================================
+            # 1. 买入点位计算（优化版）
+            # ============================================
+            # 策略：使用20日均线或近期低点，但不超过当前价的8%
+            max_buy_distance = 0.08  # 最大回调8%
+
+            # 计算斐波那契回撤位（基于近期波动）
+            # 使用20日均线作为近期波动的参考
+            if ma20 < current_price:
+                # 如果20日均线低于当前价，使用20日均线作为参考
+                price_range = current_price - ma20
+                fib_382 = current_price - 0.382 * price_range
+                fib_500 = current_price - 0.500 * price_range
+                fib_618 = current_price - 0.618 * price_range
+            else:
+                # 如果20日均线高于当前价，使用固定比例
+                fib_382 = current_price * 0.9618  # 3.82%回调
+                fib_500 = current_price * 0.95    # 5%回调
+                fib_618 = current_price * 0.9382  # 6.18%回调
+
+            # 根据RSI判断趋势强度，选择合适的回撤位
+            rsi = tech_details.get("rsi", 50)
+
+            if rsi > 60:
+                # 强趋势（RSI>60），使用浅回调（38.2%）
+                fib_buy = fib_382
+                fib_level = "38.2%"
+            elif rsi > 45:
+                # 正常趋势，使用50%回调
+                fib_buy = fib_500
+                fib_level = "50%"
+            else:
+                # 弱趋势（RSI<45），使用深回调（61.8%）
+                fib_buy = fib_618
+                fib_level = "61.8%"
+
+            # 同时考虑支撑位
+            if support_levels:
+                # 找到距离当前价最近且在8%以内的支撑位
+                valid_supports = [s for s in support_levels if s <= current_price and s >= current_price * (1 - max_buy_distance)]
+                if valid_supports:
+                    nearest_support = max(valid_supports)
+                    # 选择距离当前价最近的（斐波那契回撤位 vs 支撑位）
+                    if abs(nearest_support - current_price) < abs(fib_buy - current_price):
+                        buy_price = nearest_support
+                    else:
+                        buy_price = fib_buy
+                else:
+                    buy_price = fib_buy
+            else:
+                buy_price = fib_buy
+
+            # 最终限制：买入价不能超过当前价的8%
+            min_buy_price = current_price * (1 - max_buy_distance)
+            buy_price = max(buy_price, min_buy_price)
+
+            # 确保买入价不超过当前价（不能追高）
+            buy_price = min(buy_price, current_price)
+
+            # ============================================
+            # 2. 止损位计算（ATR动态止损）
+            # ============================================
+            # 策略：使用1.5倍ATR止损
+            atr_stop = buy_price - 1.5 * atr_approx
+
+            # 同时考虑支撑位止损
+            if support_levels:
+                valid_supports = [s for s in support_levels if s < buy_price]
+                if valid_supports:
+                    support_stop = max(valid_supports) * 0.98  # 支撑位下浮2%
+                    # 选择较大的止损（更保守）
+                    stop_loss = max(atr_stop, support_stop)
+                else:
+                    stop_loss = atr_stop
+            else:
+                stop_loss = atr_stop
+
+            # 确保止损不超过买入价的8%
+            stop_loss = max(stop_loss, buy_price * 0.92)
+
+            # ============================================
+            # 3. 止盈位计算（风险回报比1:2）
+            # ============================================
+            # 计算风险金额
+            risk = buy_price - stop_loss
+
+            # 风险回报比1:2
+            take_profit_rr2 = buy_price + 2 * risk
+
+            # 同时考虑阻力位
             if resistance_levels:
-                take_profit = max(resistance_levels)
+                # 找到距离当前价最近的阻力位
+                valid_resistance = [r for r in resistance_levels if r >= current_price]
+                if valid_resistance:
+                    nearest_resistance = min(valid_resistance)
+                    # 选择1:2风险回报比和阻力位中较小的一个
+                    take_profit = min(take_profit_rr2, nearest_resistance)
+                else:
+                    take_profit = take_profit_rr2
             else:
-                take_profit = round(current_price * 1.10, 2)
+                take_profit = take_profit_rr2
 
-            # 止损位：技术支撑位或当前价下浮5%
-            if support_levels:
-                stop_loss = min(support_levels) * 0.98  # 支撑位下浮2%
-            else:
-                stop_loss = round(current_price * 0.95, 2)
+            # 确保止盈至少比买入价高5%
+            take_profit = max(take_profit, buy_price * 1.05)
 
             return {
                 "current_price": round(current_price, 2),
@@ -374,7 +489,10 @@ class StockAnalyzer:
                 "take_profit": round(take_profit, 2),
                 "stop_loss": round(stop_loss, 2),
                 "support_levels": support_levels,
-                "resistance_levels": resistance_levels
+                "resistance_levels": resistance_levels,
+                "atr": round(atr_approx, 2),
+                "fib_level": fib_level,
+                "risk_reward_ratio": round((take_profit - buy_price) / (buy_price - stop_loss), 2) if buy_price > stop_loss else 0
             }
         except Exception as e:
             print(f"价格点位计算失败: {e}")
@@ -384,7 +502,10 @@ class StockAnalyzer:
                 "take_profit": 0,
                 "stop_loss": 0,
                 "support_levels": [],
-                "resistance_levels": []
+                "resistance_levels": [],
+                "atr": 0,
+                "fib_level": "N/A",
+                "risk_reward_ratio": 0
             }
 
 
