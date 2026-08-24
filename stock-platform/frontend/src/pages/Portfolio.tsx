@@ -5,6 +5,7 @@ import { portfolioApi } from '../services/api';
 import dayjs from 'dayjs';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../services/echarts';
+import { colors } from '../theme/tokens';
 
 interface Position {
   id: number;
@@ -231,7 +232,7 @@ const Portfolio: React.FC = () => {
       render: (profit: number | null, r: Position) => {
         if (profit === null) return '-';
         return (
-          <span style={{ color: profit >= 0 ? '#3f8600' : '#cf1322', fontWeight: 'bold' }}>
+          <span style={{ color: profit >= 0 ? colors.profit : colors.loss, fontWeight: 'bold' }}>
             {profit >= 0 ? '+' : ''}${profit.toFixed(2)} ({r.profit_loss_pct?.toFixed(2)}%)
           </span>
         );
@@ -289,7 +290,7 @@ const Portfolio: React.FC = () => {
       render: (pnl: number | null, r: Position) => {
         if (pnl === null) return '-';
         return (
-          <span style={{ color: pnl >= 0 ? '#3f8600' : '#cf1322', fontWeight: 'bold' }}>
+          <span style={{ color: pnl >= 0 ? colors.profit : colors.loss, fontWeight: 'bold' }}>
             {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({r.realized_pnl_pct?.toFixed(2)}%)
           </span>
         );
@@ -376,7 +377,7 @@ const Portfolio: React.FC = () => {
             <Statistic
               title="浮动盈亏"
               value={summary?.total_profit || 0} precision={2} prefix="$"
-              valueStyle={{ color: (summary?.total_profit || 0) >= 0 ? '#3f8600' : '#cf1322' }}
+              valueStyle={{ color: (summary?.total_profit || 0) >= 0 ? colors.profit : colors.loss }}
             />
           </Card>
         </Col>
@@ -385,7 +386,7 @@ const Portfolio: React.FC = () => {
             <Statistic
               title="收益率"
               value={summary?.total_profit_pct || 0} precision={2} suffix="%"
-              valueStyle={{ color: (summary?.total_profit_pct || 0) >= 0 ? '#3f8600' : '#cf1322' }}
+              valueStyle={{ color: (summary?.total_profit_pct || 0) >= 0 ? colors.profit : colors.loss }}
             />
           </Card>
         </Col>
@@ -398,7 +399,7 @@ const Portfolio: React.FC = () => {
               suffix={summary?.cash_pct != null ? '%' : ''}
               valueStyle={{
                 color: summary?.cash_pct == null ? undefined :
-                  summary.cash_pct < 15 ? '#cf1322' : summary.cash_pct > 25 ? '#faad14' : '#3f8600'
+                  summary.cash_pct < 15 ? colors.loss : summary.cash_pct > 25 ? colors.warning : colors.profit
               }}
             />
           </Card>
@@ -417,7 +418,7 @@ const Portfolio: React.FC = () => {
               </span>
               <span style={{ fontSize: 13 }}>
                 当前回撤{' '}
-                <b style={{ color: ddStats.current_drawdown_pct >= 20 ? '#cf1322' : '#3f8600' }}>
+                <b style={{ color: ddStats.current_drawdown_pct >= 20 ? colors.loss : colors.profit }}>
                   -{ddStats.current_drawdown_pct}%
                 </b>
                 {' '}（历史最大 -{ddStats.max_drawdown_pct}%）
@@ -449,18 +450,18 @@ const Portfolio: React.FC = () => {
                   data: curve.map(p => p.value),
                   smooth: true,
                   showSymbol: false,
-                  lineStyle: { color: '#1890ff', width: 2 },
-                  areaStyle: { color: '#1890ff', opacity: 0.12 },
+                  lineStyle: { color: colors.primary, width: 2 },
+                  areaStyle: { color: colors.primary, opacity: 0.12 },
                 }],
               }}
               style={{ height: 260 }}
             />
-            <div style={{ fontSize: 12, color: '#595959' }}>
+            <div style={{ fontSize: 12, color: colors.textSecondary }}>
               快照由后台监控任务在每个交易时段自动写入（同日取最新值）
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: 30, color: '#595959' }}>
+          <div style={{ textAlign: 'center', padding: 30, color: colors.textSecondary }}>
             暂无快照数据——后台监控任务会在交易时段自动记录每日组合市值，累积几天后这里会出现曲线
           </div>
         )}

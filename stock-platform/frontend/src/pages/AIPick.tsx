@@ -7,6 +7,7 @@ import {
   FileTextOutlined, ReloadOutlined, SettingOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
 import { aiPickApi } from '../services/api';
+import { colors } from '../theme/tokens';
 
 const { TextArea } = Input;
 const { Paragraph } = Typography;
@@ -227,7 +228,7 @@ const AIPick: React.FC = () => {
           description={
             <div style={{ fontSize: 13 }}>
               请编辑 <b>股票投资/config/config.json</b>，添加 ai_provider 字段（该文件不会提交到git）：
-              <Paragraph copyable style={{ margin: '8px 0 0', fontSize: 12, background: '#f6f6f6', padding: 8 }}>
+              <Paragraph copyable style={{ margin: '8px 0 0', fontSize: 12, background: colors.bgLight, padding: 8 }}>
                 {`"ai_provider": {"base_url": "https://openrouter.ai/api/v1", "api_key": "你的key", "model": "厂商/模型ID"}`}
               </Paragraph>
             </div>
@@ -277,7 +278,7 @@ const AIPick: React.FC = () => {
             </Button>
           </Space>
         </Space>
-        <div style={{ color: '#595959', fontSize: 12, marginTop: 12 }}>
+        <div style={{ color: colors.textSecondary, fontSize: 12, marginTop: 12 }}>
           分析框架：产业链卡点 → 定价权 → 验证链 → 压力测试。候选池默认覆盖AI算力/半导体/光通信25只美股，
           可在config.json的ai_provider.universe字段自定义。输出仅供研究参考，不构成投资建议。
         </div>
@@ -302,7 +303,7 @@ const AIPick: React.FC = () => {
         {loadingSummaries ? (
           <div style={{ textAlign: 'center', padding: 30 }}><Spin /></div>
         ) : summaries.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 24, color: '#595959' }}>
+          <div style={{ textAlign: 'center', padding: 24, color: colors.textSecondary }}>
             还没有博主总结——抓取最新帖子后会自动生成每位博主的观点总结
           </div>
         ) : (
@@ -315,14 +316,14 @@ const AIPick: React.FC = () => {
                   <b>{s.blogger_name}</b>
                   <Tag>{s.posts_count}条帖子</Tag>
                   {(s.period_start || s.period_end) && (
-                    <span style={{ color: '#595959', fontSize: 12 }}>{s.period_start} ~ {s.period_end}</span>
+                    <span style={{ color: colors.textSecondary, fontSize: 12 }}>{s.period_start} ~ {s.period_end}</span>
                   )}
                 </Space>
               }
               style={{ marginBottom: 12 }}
             >
               <Paragraph style={{ marginBottom: 4 }}>{s.summary_text}</Paragraph>
-              <div style={{ color: '#595959', fontSize: 12 }}>
+              <div style={{ color: colors.textSecondary, fontSize: 12 }}>
                 生成于 {s.created_at ? s.created_at.replace('T', ' ').slice(0, 16) : '--'}
               </div>
             </Card>
@@ -335,7 +336,7 @@ const AIPick: React.FC = () => {
         <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>
       ) : Object.keys(grouped).length === 0 ? (
         <Card>
-          <div style={{ textAlign: 'center', padding: 40, color: '#595959' }}>
+          <div style={{ textAlign: 'center', padding: 40, color: colors.textSecondary }}>
             还没有选股记录——点击上方「开始AI选股」跑第一次分析
           </div>
         </Card>
@@ -366,7 +367,7 @@ const AIPick: React.FC = () => {
                       <b>#{p.rank} {p.stock_code}</b>
                       <span>{p.stock_name}</span>
                       <Tag color={CONF_COLOR[p.confidence]}>{CONF_LABEL[p.confidence]}</Tag>
-                      {p.price_at_pick != null && <span style={{ color: '#595959' }}>@${p.price_at_pick}</span>}
+                      {p.price_at_pick != null && <span style={{ color: colors.textSecondary }}>@${p.price_at_pick}</span>}
                     </Space>
                   }
                   style={{ marginBottom: 12 }}

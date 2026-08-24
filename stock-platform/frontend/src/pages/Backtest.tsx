@@ -4,6 +4,7 @@ import { SearchOutlined, ExperimentOutlined, AimOutlined, PlayCircleOutlined } f
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../services/echarts';
 import { stockApi, backtestApi } from '../services/api';
+import { colors } from '../theme/tokens';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -129,14 +130,14 @@ interface WFResult {
 
 // 各策略折线颜色
 const STRATEGY_COLORS: Record<string, string> = {
-  linear: '#1890ff',
-  nonlinear: '#722ed1',
-  ma_cross: '#13c2c2',
-  macd: '#fa8c16',
+  linear: colors.primary,
+  nonlinear: colors.chartPurple,
+  ma_cross: colors.chartCyan,
+  macd: colors.chartOrange,
 };
 
 // 涨跌着色：正绿负红零灰
-const pctColor = (v: number) => (v > 0 ? '#3f8600' : v < 0 ? '#cf1322' : '#595959');
+const pctColor = (v: number) => (v > 0 ? colors.profit : v < 0 ? colors.loss : colors.textSecondary);
 
 // 参数dict格式化为 "tp=0.15, sl=0.08"
 const fmtParams = (p: Record<string, number>) =>
@@ -335,10 +336,10 @@ const Backtest: React.FC = () => {
       data: curve.map(d => d.value),
       smooth: true,
       showSymbol: false,
-      lineStyle: { width: 2, color: '#1890ff' },
+      lineStyle: { width: 2, color: colors.primary },
       areaStyle: {
         opacity: 0.15,
-        color: '#1890ff'
+        color: colors.primary
       }
     }];
 
@@ -350,8 +351,8 @@ const Backtest: React.FC = () => {
         data: backtestResult.buy_hold_curve.map(d => d.value),
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 2, color: '#8c8c8c', type: 'dashed' },
-        itemStyle: { color: '#8c8c8c' }
+        lineStyle: { width: 2, color: colors.chartNeutral, type: 'dashed' },
+        itemStyle: { color: colors.chartNeutral }
       });
     }
 
@@ -415,8 +416,8 @@ const Backtest: React.FC = () => {
       data: compareResult.buy_hold.equity_curve.map(d => d.value),
       smooth: true,
       showSymbol: false,
-      lineStyle: { width: 2, color: '#8c8c8c', type: 'dashed' },
-      itemStyle: { color: '#8c8c8c' }
+      lineStyle: { width: 2, color: colors.chartNeutral, type: 'dashed' },
+      itemStyle: { color: colors.chartNeutral }
     });
 
     return {
@@ -477,7 +478,7 @@ const Backtest: React.FC = () => {
         orient: 'vertical',
         right: 10,
         top: 'center',
-        inRange: { color: ['#cf1322', '#faad14', '#3f8600'] }
+        inRange: { color: [colors.loss, colors.warning, colors.profit] }
       },
       series: [{
         type: 'heatmap',
@@ -502,8 +503,8 @@ const Backtest: React.FC = () => {
         data: curve.map(d => d.value),
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 2, color: '#1890ff' },
-        areaStyle: { opacity: 0.12, color: '#1890ff' }
+        lineStyle: { width: 2, color: colors.primary },
+        areaStyle: { opacity: 0.12, color: colors.primary }
       },
       {
         name: 'OOS买入持有',
@@ -512,8 +513,8 @@ const Backtest: React.FC = () => {
         smooth: true,
         showSymbol: false,
         connectNulls: true,
-        lineStyle: { width: 2, color: '#8c8c8c', type: 'dashed' },
-        itemStyle: { color: '#8c8c8c' }
+        lineStyle: { width: 2, color: colors.chartNeutral, type: 'dashed' },
+        itemStyle: { color: colors.chartNeutral }
       }
     ];
 
@@ -573,7 +574,7 @@ const Backtest: React.FC = () => {
       render: (pct: number | undefined) => {
         if (pct === undefined) return '-';
         return (
-          <span style={{ color: pct >= 0 ? '#3f8600' : '#cf1322' }}>
+          <span style={{ color: pct >= 0 ? colors.profit : colors.loss }}>
             {pct >= 0 ? '+' : ''}{(pct * 100).toFixed(2)}%
           </span>
         );
@@ -612,7 +613,7 @@ const Backtest: React.FC = () => {
       title: '最大回撤',
       dataIndex: 'max_drawdown',
       key: 'max_drawdown',
-      render: (v: number) => <span style={{ color: '#cf1322' }}>{v.toFixed(2)}%</span>
+      render: (v: number) => <span style={{ color: colors.loss }}>{v.toFixed(2)}%</span>
     },
     {
       title: '夏普比率',
@@ -689,7 +690,7 @@ const Backtest: React.FC = () => {
       title: '最大回撤',
       dataIndex: 'max_drawdown',
       key: 'max_drawdown',
-      render: (v: number) => <span style={{ color: '#cf1322' }}>{v.toFixed(2)}%</span>
+      render: (v: number) => <span style={{ color: colors.loss }}>{v.toFixed(2)}%</span>
     },
     {
       title: '交易次数',
@@ -741,7 +742,7 @@ const Backtest: React.FC = () => {
       title: 'OOS回撤',
       dataIndex: 'oos_max_drawdown',
       key: 'oos_max_drawdown',
-      render: (v: number) => <span style={{ color: '#cf1322' }}>{v.toFixed(2)}%</span>
+      render: (v: number) => <span style={{ color: colors.loss }}>{v.toFixed(2)}%</span>
     },
     {
       title: '跑赢持有',
@@ -750,7 +751,7 @@ const Backtest: React.FC = () => {
       render: (ok: boolean, record: WFSegment) => (
         <>
           <Tag color={ok ? 'green' : 'red'}>{ok ? '✓ 跑赢' : '✗ 跑输'}</Tag>
-          <span style={{ fontSize: 12, color: '#595959' }}>持有{record.oos_buy_hold_return >= 0 ? '+' : ''}{record.oos_buy_hold_return.toFixed(2)}%</span>
+          <span style={{ fontSize: 12, color: colors.textSecondary }}>持有{record.oos_buy_hold_return >= 0 ? '+' : ''}{record.oos_buy_hold_return.toFixed(2)}%</span>
         </>
       )
     }
@@ -928,7 +929,7 @@ const Backtest: React.FC = () => {
                   （{METRIC_LABEL[optResult.metric] || optResult.metric} {Number(optResult.best.sharpe_ratio).toFixed(2)}）
                 </Tag>
                 <ReactEChartsCore echarts={echarts} option={getOptimizeHeatmapOption()} style={{ height: 320 }} />
-                <div style={{ margin: '8px 0 4px', color: '#595959' }}>
+                <div style={{ margin: '8px 0 4px', color: colors.textSecondary }}>
                   热力图：x={optResult.heatmap.x_name}，y={optResult.heatmap.y_name}，颜色=夏普比率；下表为Top5最优参数组合
                 </div>
                 <Table
@@ -1026,7 +1027,7 @@ const Backtest: React.FC = () => {
                       precision={2}
                       suffix="%"
                       valueStyle={{
-                        color: backtestResult.total_return >= 0 ? '#3f8600' : '#cf1322'
+                        color: backtestResult.total_return >= 0 ? colors.profit : colors.loss
                       }}
                     />
                   </Col>
@@ -1037,7 +1038,7 @@ const Backtest: React.FC = () => {
                       precision={2}
                       suffix="%"
                       valueStyle={{
-                        color: backtestResult.annual_return >= 0 ? '#3f8600' : '#cf1322'
+                        color: backtestResult.annual_return >= 0 ? colors.profit : colors.loss
                       }}
                     />
                   </Col>
@@ -1050,7 +1051,7 @@ const Backtest: React.FC = () => {
                       value={backtestResult.max_drawdown}
                       precision={2}
                       suffix="%"
-                      valueStyle={{ color: '#cf1322' }}
+                      valueStyle={{ color: colors.loss }}
                     />
                   </Col>
                   <Col span={12}>
@@ -1104,7 +1105,7 @@ const Backtest: React.FC = () => {
             </>
           ) : (
             <Card>
-              <div style={{ textAlign: 'center', padding: 50, color: '#595959' }}>
+              <div style={{ textAlign: 'center', padding: 50, color: colors.textSecondary }}>
                 配置参数后点击"开始回测"
               </div>
             </Card>

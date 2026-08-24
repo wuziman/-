@@ -6,6 +6,7 @@ import echarts from '../services/echarts';
 import { stockApi, analysisApi } from '../services/api';
 import { patternApi, SignalsResult } from '../services/patternApi';
 import { trackingApi, TrackingResult } from '../services/trackingApi';
+import { colors } from '../theme/tokens';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -211,15 +212,15 @@ const Analysis: React.FC = () => {
       signals.support_resistance.supports.forEach((s) => {
         srMarkData.push({
           yAxis: s.price,
-          lineStyle: { color: '#14b143', type: 'dashed', width: 1 },
-          label: { formatter: `支 ${s.price}`, position: 'insideEndTop', fontSize: 10, color: '#14b143' }
+          lineStyle: { color: colors.klineDown, type: 'dashed', width: 1 },
+          label: { formatter: `支 ${s.price}`, position: 'insideEndTop', fontSize: 10, color: colors.klineDown }
         });
       });
       signals.support_resistance.resistances.forEach((r) => {
         srMarkData.push({
           yAxis: r.price,
-          lineStyle: { color: '#ef232a', type: 'dashed', width: 1 },
-          label: { formatter: `阻 ${r.price}`, position: 'insideEndBottom', fontSize: 10, color: '#ef232a' }
+          lineStyle: { color: colors.klineUp, type: 'dashed', width: 1 },
+          label: { formatter: `阻 ${r.price}`, position: 'insideEndBottom', fontSize: 10, color: colors.klineUp }
         });
       });
     }
@@ -237,9 +238,9 @@ const Analysis: React.FC = () => {
         if (idx === undefined) return;
         const d = historyData[idx];
         if (p.direction === 'bullish') {
-          patternPoints.push({ value: [p.date, d.low - offset, p.pattern], symbolRotate: 0, itemStyle: { color: '#14b143' } });
+          patternPoints.push({ value: [p.date, d.low - offset, p.pattern], symbolRotate: 0, itemStyle: { color: colors.klineDown } });
         } else if (p.direction === 'bearish') {
-          patternPoints.push({ value: [p.date, d.high + offset, p.pattern], symbolRotate: 180, itemStyle: { color: '#ef232a' } });
+          patternPoints.push({ value: [p.date, d.high + offset, p.pattern], symbolRotate: 180, itemStyle: { color: colors.klineUp } });
         } else {
           patternPoints.push({ value: [p.date, d.high + offset, p.pattern], itemStyle: { color: '#999' } });
         }
@@ -254,16 +255,16 @@ const Analysis: React.FC = () => {
         xAxisIndex: 0,
         yAxisIndex: 0,
         data: ohlc,
-        itemStyle: { color: '#ef232a', color0: '#14b143', borderColor: '#ef232a', borderColor0: '#14b143' },
+        itemStyle: { color: colors.klineUp, color0: colors.klineDown, borderColor: colors.klineUp, borderColor0: colors.klineDown },
         ...(srMarkData.length > 0 ? { markLine: { symbol: 'none', silent: true, data: srMarkData } } : {})
       }
     ];
 
     if (showMA) {
       series.push(
-        { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma5), symbol: 'none', lineStyle: { width: 1, color: '#f5a623' } },
-        { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma20), symbol: 'none', lineStyle: { width: 1.5, color: '#1890ff' } },
-        { name: 'MA50', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma50), symbol: 'none', lineStyle: { width: 1.5, color: '#722ed1' } },
+        { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma5), symbol: 'none', lineStyle: { width: 1, color: colors.ma5 } },
+        { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma20), symbol: 'none', lineStyle: { width: 1.5, color: colors.primary } },
+        { name: 'MA50', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma50), symbol: 'none', lineStyle: { width: 1.5, color: colors.chartPurple } },
       );
     }
 
@@ -294,7 +295,7 @@ const Analysis: React.FC = () => {
       xAxisIndex: 1,
       yAxisIndex: 1,
       data: volumes,
-      itemStyle: { color: '#5470c6', opacity: 0.7 }
+      itemStyle: { color: colors.indicatorBlue, opacity: 0.7 }
     });
 
     const legendData = ['K线', '成交量'];
@@ -347,10 +348,10 @@ const Analysis: React.FC = () => {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 8) return '#52c41a';
-    if (score >= 6) return '#1890ff';
-    if (score >= 4) return '#faad14';
-    return '#ff4d4f';
+    if (score >= 8) return colors.success;
+    if (score >= 6) return colors.primary;
+    if (score >= 4) return colors.warning;
+    return colors.error;
   };
 
   const getRecommendationColor = (level: string) => {
@@ -404,11 +405,11 @@ const Analysis: React.FC = () => {
         <Divider style={{ margin: '8px 0' }} />
         <div style={{ fontWeight: 'bold', marginBottom: 6 }}>近期K线形态</div>
         {recentPatterns.length === 0 ? (
-          <div style={{ color: '#595959', fontSize: 12 }}>近期未识别到明显形态</div>
+          <div style={{ color: colors.textSecondary, fontSize: 12 }}>近期未识别到明显形态</div>
         ) : (
           recentPatterns.map((p, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid #f5f5f5' }}>
-              <span style={{ color: '#595959', fontSize: 12 }}>{p.date}</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0', borderBottom: `1px solid ${colors.bgLight}` }}>
+              <span style={{ color: colors.textSecondary, fontSize: 12 }}>{p.date}</span>
               <span style={{ fontSize: 13 }}>{p.pattern}</span>
               <Tag color={dirMeta[p.direction]?.color ?? 'default'} style={{ marginRight: 0 }}>
                 {dirMeta[p.direction]?.label ?? p.direction}
@@ -441,7 +442,7 @@ const Analysis: React.FC = () => {
           type: 'scatter',
           symbolSize: 12,
           data,
-          itemStyle: { color: '#1890ff', opacity: 0.75 },
+          itemStyle: { color: colors.primary, opacity: 0.75 },
           markLine: {
             silent: true,
             symbol: 'none',
@@ -484,9 +485,9 @@ const Analysis: React.FC = () => {
               dataIndex: 'avg_return',
               render: (v: number | null) =>
                 v === null || v === undefined ? (
-                  <span style={{ color: '#595959' }}>-</span>
+                  <span style={{ color: colors.textSecondary }}>-</span>
                 ) : (
-                  <span style={{ color: v > 0 ? '#52c41a' : v < 0 ? '#ff4d4f' : '#595959', fontWeight: 'bold' }}>
+                  <span style={{ color: v > 0 ? colors.success : v < 0 ? colors.error : colors.textSecondary, fontWeight: 'bold' }}>
                     {v > 0 ? '+' : ''}{v}%
                   </span>
                 )
@@ -594,11 +595,11 @@ const Analysis: React.FC = () => {
                 </>
               ) : historyError ? (
                 <div style={{ textAlign: 'center', padding: 50 }}>
-                  <div style={{ color: '#cf1322', marginBottom: 12 }}>{historyError}</div>
+                  <div style={{ color: colors.loss, marginBottom: 12 }}>{historyError}</div>
                   <Button type="primary" onClick={() => fetchChartData(selectedStock)}>重新加载</Button>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: 50, color: '#595959' }}>
+                <div style={{ textAlign: 'center', padding: 50, color: colors.textSecondary }}>
                   {historyLoading ? '加载中...' : '暂无数据'}
                 </div>
               )}
@@ -659,7 +660,7 @@ const Analysis: React.FC = () => {
                         children: (
                           <Descriptions column={1} size="small">
                             <Descriptions.Item label="买入价">
-                              <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
+                              <span style={{ color: colors.success, fontWeight: 'bold' }}>
                                 ${analysisResult.price_levels.linear.buy}
                               </span>
                               <Tag color="green" style={{ marginLeft: 8 }}>
@@ -667,7 +668,7 @@ const Analysis: React.FC = () => {
                               </Tag>
                             </Descriptions.Item>
                             <Descriptions.Item label="止盈位">
-                              <span style={{ color: '#1890ff' }}>
+                              <span style={{ color: colors.primary }}>
                                 ${analysisResult.price_levels.linear.profit}
                               </span>
                               <Tag color="blue" style={{ marginLeft: 8 }}>
@@ -675,7 +676,7 @@ const Analysis: React.FC = () => {
                               </Tag>
                             </Descriptions.Item>
                             <Descriptions.Item label="止损位">
-                              <span style={{ color: '#ff4d4f' }}>
+                              <span style={{ color: colors.error }}>
                                 ${analysisResult.price_levels.linear.stop}
                               </span>
                               <Tag color="red" style={{ marginLeft: 8 }}>
@@ -691,7 +692,7 @@ const Analysis: React.FC = () => {
                         children: (
                           <Descriptions column={1} size="small">
                             <Descriptions.Item label="买入价">
-                              <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
+                              <span style={{ color: colors.success, fontWeight: 'bold' }}>
                                 ${analysisResult.price_levels.nonlinear.buy}
                               </span>
                               <Tag color="green" style={{ marginLeft: 8 }}>
@@ -699,7 +700,7 @@ const Analysis: React.FC = () => {
                               </Tag>
                             </Descriptions.Item>
                             <Descriptions.Item label="止盈位">
-                              <span style={{ color: '#1890ff' }}>
+                              <span style={{ color: colors.primary }}>
                                 ${analysisResult.price_levels.nonlinear.profit}
                               </span>
                               <Tag color="blue" style={{ marginLeft: 8 }}>
@@ -707,7 +708,7 @@ const Analysis: React.FC = () => {
                               </Tag>
                             </Descriptions.Item>
                             <Descriptions.Item label="止损位">
-                              <span style={{ color: '#ff4d4f' }}>
+                              <span style={{ color: colors.error }}>
                                 ${analysisResult.price_levels.nonlinear.stop}
                               </span>
                               <Tag color="red" style={{ marginLeft: 8 }}>
@@ -722,7 +723,7 @@ const Analysis: React.FC = () => {
                         label: '⚡ MACD',
                         children: (() => {
                           const m = analysisResult.price_levels.macd;
-                          if (!m) return <div style={{ color: '#595959' }}>暂无数据</div>;
+                          if (!m) return <div style={{ color: colors.textSecondary }}>暂无数据</div>;
                           const isGolden = m.state === 'golden';
                           return (
                             <div>
@@ -740,7 +741,7 @@ const Analysis: React.FC = () => {
                               <Descriptions column={1} size="small">
                                 {isGolden && m.add_price && (
                                   <Descriptions.Item label="加仓参考">
-                                    <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
+                                    <span style={{ color: colors.success, fontWeight: 'bold' }}>
                                       ${m.add_price}
                                     </span>
                                     <Tag color="green" style={{ marginLeft: 8 }}>回踩MA20</Tag>
@@ -748,7 +749,7 @@ const Analysis: React.FC = () => {
                                 )}
                                 {!isGolden && m.watch_price && (
                                   <Descriptions.Item label="关注买点">
-                                    <span style={{ color: '#faad14', fontWeight: 'bold' }}>
+                                    <span style={{ color: colors.warning, fontWeight: 'bold' }}>
                                       ${m.watch_price}
                                     </span>
                                     <Tag color="orange" style={{ marginLeft: 8 }}>布林下轨</Tag>
@@ -756,13 +757,13 @@ const Analysis: React.FC = () => {
                                 )}
                                 {m.state !== 'unknown' && (
                                   <Descriptions.Item label="离场信号">
-                                    <span style={{ color: '#1890ff' }}>
+                                    <span style={{ color: colors.primary }}>
                                       {isGolden ? 'MACD死叉（跟随趋势，不设固定止盈）' : 'MACD金叉'}
                                     </span>
                                   </Descriptions.Item>
                                 )}
                                 <Descriptions.Item label="纪律止损">
-                                  <span style={{ color: '#ff4d4f' }}>${m.stop}</span>
+                                  <span style={{ color: colors.error }}>${m.stop}</span>
                                   <Tag color="red" style={{ marginLeft: 8 }}>-8%</Tag>
                                 </Descriptions.Item>
                               </Descriptions>
@@ -789,14 +790,14 @@ const Analysis: React.FC = () => {
 
                 {analysisResult.details?.news?.news && analysisResult.details.news.news.length > 0 && (
                   <Card title={`📰 消息面 · ${analysisResult.details.news.sentiment}`} style={{ marginBottom: 16 }}>
-                    <div style={{ marginBottom: 8, fontSize: 12, color: '#595959' }}>
+                    <div style={{ marginBottom: 8, fontSize: 12, color: colors.textSecondary }}>
                       共{analysisResult.details.news.news_count}条新闻 | 利好{analysisResult.details.news.positive_count}条 / 利空{analysisResult.details.news.negative_count}条
                     </div>
                     {(newsExpanded
                       ? analysisResult.details.news.news
                       : analysisResult.details.news.news.slice(0, 8)
                     ).map((n: any, i: number) => (
-                      <div key={i} style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid #f0f0f0' }}>
+                      <div key={i} style={{ marginBottom: 10, paddingBottom: 8, borderBottom: `1px solid ${colors.border}` }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                           <Tag color={n.sentiment > 0 ? 'green' : n.sentiment < 0 ? 'red' : 'default'} style={{ flexShrink: 0 }}>
                             {n.sentiment > 0 ? '利好' : n.sentiment < 0 ? '利空' : '中性'}
@@ -815,7 +816,7 @@ const Analysis: React.FC = () => {
                             <span style={{ fontSize: 13, lineHeight: 1.5 }}>{n.title}</span>
                           )}
                         </div>
-                        <div style={{ fontSize: 11, color: '#595959', marginTop: 4, marginLeft: 44 }}>
+                        <div style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4, marginLeft: 44 }}>
                           {n.source} · {n.date}
                           {n.url && (
                             <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 6 }}>↗</a>
@@ -867,7 +868,7 @@ const Analysis: React.FC = () => {
               </>
             ) : (
               <Card>
-                <div style={{ textAlign: 'center', padding: 50, color: '#595959' }}>
+                <div style={{ textAlign: 'center', padding: 50, color: colors.textSecondary }}>
                   选择股票后点击"开始分析"
                 </div>
               </Card>

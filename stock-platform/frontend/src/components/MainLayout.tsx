@@ -8,6 +8,7 @@ import {
   RobotOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { colors } from '../theme/tokens';
 
 const { Header, Sider, Content } = Layout;
 
@@ -59,9 +60,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderBottom: '1px solid #f0f0f0'
+          borderBottom: `1px solid ${colors.border}`
         }}>
-          <h2 style={{ margin: 0, color: '#1890ff' }}>📈 量化平台</h2>
+          <h2 style={{ margin: 0, color: colors.primary }}>📈 量化平台</h2>
         </div>
         <Menu
           mode="inline"
@@ -75,7 +76,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <Header style={{
           background: '#fff',
           padding: '0 24px',
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: `1px solid ${colors.border}`,
           display: 'flex',
           alignItems: 'center'
         }}>

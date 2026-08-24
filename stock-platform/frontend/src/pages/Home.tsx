@@ -14,6 +14,7 @@ import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../services/echarts';
 import { portfolioApi, stockApi, reportApi } from '../services/api';
 import { scheduleApi } from '../services/scheduleApi';
+import { colors } from '../theme/tokens';
 
 interface PositionSummary {
   total_positions: number;
@@ -239,8 +240,8 @@ const Home: React.FC = () => {
               value={summary?.total_profit || 0}
               precision={2}
               prefix="$"
-              suffix={(summary?.total_profit || 0) >= 0 ? <ArrowUpOutlined style={{ color: '#3f8600' }} /> : <ArrowDownOutlined style={{ color: '#cf1322' }} />}
-              valueStyle={{ color: (summary?.total_profit || 0) >= 0 ? '#3f8600' : '#cf1322' }}
+              suffix={(summary?.total_profit || 0) >= 0 ? <ArrowUpOutlined style={{ color: colors.profit }} /> : <ArrowDownOutlined style={{ color: colors.loss }} />}
+              valueStyle={{ color: (summary?.total_profit || 0) >= 0 ? colors.profit : colors.loss }}
             />
           </Card>
         </Col>
@@ -251,7 +252,7 @@ const Home: React.FC = () => {
               value={summary?.total_profit_pct || 0}
               precision={2}
               suffix="%"
-              valueStyle={{ color: (summary?.total_profit_pct || 0) >= 0 ? '#3f8600' : '#cf1322' }}
+              valueStyle={{ color: (summary?.total_profit_pct || 0) >= 0 ? colors.profit : colors.loss }}
             />
           </Card>
         </Col>
@@ -273,7 +274,7 @@ const Home: React.FC = () => {
             {summary && summary.total_positions > 0 ? (
               <ReactEChartsCore echarts={echarts} option={getPortfolioChartOption()} style={{ height: 320 }} />
             ) : (
-              <div style={{ textAlign: 'center', padding: 50, color: '#595959' }}>暂无持仓数据</div>
+              <div style={{ textAlign: 'center', padding: 50, color: colors.textSecondary }}>暂无持仓数据</div>
             )}
           </Card>
         </Col>
@@ -319,7 +320,7 @@ const Home: React.FC = () => {
                 ))}
               </Space>
             ) : (
-              <span style={{ color: '#595959', fontSize: 13 }}>
+              <span style={{ color: colors.textSecondary, fontSize: 13 }}>
                 近30天暂无可确认的财报日期（A股数据源常缺财报日历，仅美股可查）
               </span>
             )}
@@ -356,7 +357,7 @@ const Home: React.FC = () => {
                 立即推送
               </Button>
             </Space>
-            <div style={{ color: '#595959', marginTop: 12, fontSize: 13 }}>
+            <div style={{ color: colors.textSecondary, marginTop: 12, fontSize: 13 }}>
               工作日按设定时间自动生成日报并推送到企业微信（后台每30分钟检查一次，当日仅发送一次）。
               最近发送日期：<b>{lastSentDate || '从未发送'}</b>
             </div>
@@ -389,7 +390,7 @@ const Home: React.FC = () => {
         )}
         <pre style={{
           whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.7,
-          background: '#fafafa', padding: 16, borderRadius: 8, maxHeight: 480, overflow: 'auto'
+          background: colors.bgSecondary, padding: 16, borderRadius: 8, maxHeight: 480, overflow: 'auto'
         }}>
           {reportText}
         </pre>
