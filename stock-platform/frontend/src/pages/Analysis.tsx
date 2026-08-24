@@ -404,11 +404,11 @@ const Analysis: React.FC = () => {
         <Divider style={{ margin: '8px 0' }} />
         <div style={{ fontWeight: 'bold', marginBottom: 6 }}>近期K线形态</div>
         {recentPatterns.length === 0 ? (
-          <div style={{ color: '#999', fontSize: 12 }}>近期未识别到明显形态</div>
+          <div style={{ color: '#595959', fontSize: 12 }}>近期未识别到明显形态</div>
         ) : (
           recentPatterns.map((p, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid #f5f5f5' }}>
-              <span style={{ color: '#999', fontSize: 12 }}>{p.date}</span>
+              <span style={{ color: '#595959', fontSize: 12 }}>{p.date}</span>
               <span style={{ fontSize: 13 }}>{p.pattern}</span>
               <Tag color={dirMeta[p.direction]?.color ?? 'default'} style={{ marginRight: 0 }}>
                 {dirMeta[p.direction]?.label ?? p.direction}
@@ -484,9 +484,9 @@ const Analysis: React.FC = () => {
               dataIndex: 'avg_return',
               render: (v: number | null) =>
                 v === null || v === undefined ? (
-                  <span style={{ color: '#999' }}>-</span>
+                  <span style={{ color: '#595959' }}>-</span>
                 ) : (
-                  <span style={{ color: v > 0 ? '#52c41a' : v < 0 ? '#ff4d4f' : '#999', fontWeight: 'bold' }}>
+                  <span style={{ color: v > 0 ? '#52c41a' : v < 0 ? '#ff4d4f' : '#595959', fontWeight: 'bold' }}>
                     {v > 0 ? '+' : ''}{v}%
                   </span>
                 )
@@ -598,7 +598,7 @@ const Analysis: React.FC = () => {
                   <Button type="primary" onClick={() => fetchChartData(selectedStock)}>重新加载</Button>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: 50, color: '#999' }}>
+                <div style={{ textAlign: 'center', padding: 50, color: '#595959' }}>
                   {historyLoading ? '加载中...' : '暂无数据'}
                 </div>
               )}
@@ -722,7 +722,7 @@ const Analysis: React.FC = () => {
                         label: '⚡ MACD',
                         children: (() => {
                           const m = analysisResult.price_levels.macd;
-                          if (!m) return <div style={{ color: '#999' }}>暂无数据</div>;
+                          if (!m) return <div style={{ color: '#595959' }}>暂无数据</div>;
                           const isGolden = m.state === 'golden';
                           return (
                             <div>
@@ -789,7 +789,7 @@ const Analysis: React.FC = () => {
 
                 {analysisResult.details?.news?.news && analysisResult.details.news.news.length > 0 && (
                   <Card title={`📰 消息面 · ${analysisResult.details.news.sentiment}`} style={{ marginBottom: 16 }}>
-                    <div style={{ marginBottom: 8, fontSize: 12, color: '#999' }}>
+                    <div style={{ marginBottom: 8, fontSize: 12, color: '#595959' }}>
                       共{analysisResult.details.news.news_count}条新闻 | 利好{analysisResult.details.news.positive_count}条 / 利空{analysisResult.details.news.negative_count}条
                     </div>
                     {(newsExpanded
@@ -815,7 +815,7 @@ const Analysis: React.FC = () => {
                             <span style={{ fontSize: 13, lineHeight: 1.5 }}>{n.title}</span>
                           )}
                         </div>
-                        <div style={{ fontSize: 11, color: '#999', marginTop: 4, marginLeft: 44 }}>
+                        <div style={{ fontSize: 11, color: '#595959', marginTop: 4, marginLeft: 44 }}>
                           {n.source} · {n.date}
                           {n.url && (
                             <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 6 }}>↗</a>
@@ -867,7 +867,7 @@ const Analysis: React.FC = () => {
               </>
             ) : (
               <Card>
-                <div style={{ textAlign: 'center', padding: 50, color: '#999' }}>
+                <div style={{ textAlign: 'center', padding: 50, color: '#595959' }}>
                   选择股票后点击"开始分析"
                 </div>
               </Card>

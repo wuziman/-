@@ -136,7 +136,7 @@ const STRATEGY_COLORS: Record<string, string> = {
 };
 
 // 涨跌着色：正绿负红零灰
-const pctColor = (v: number) => (v > 0 ? '#3f8600' : v < 0 ? '#cf1322' : '#8c8c8c');
+const pctColor = (v: number) => (v > 0 ? '#3f8600' : v < 0 ? '#cf1322' : '#595959');
 
 // 参数dict格式化为 "tp=0.15, sl=0.08"
 const fmtParams = (p: Record<string, number>) =>
@@ -750,7 +750,7 @@ const Backtest: React.FC = () => {
       render: (ok: boolean, record: WFSegment) => (
         <>
           <Tag color={ok ? 'green' : 'red'}>{ok ? '✓ 跑赢' : '✗ 跑输'}</Tag>
-          <span style={{ fontSize: 12, color: '#8c8c8c' }}>持有{record.oos_buy_hold_return >= 0 ? '+' : ''}{record.oos_buy_hold_return.toFixed(2)}%</span>
+          <span style={{ fontSize: 12, color: '#595959' }}>持有{record.oos_buy_hold_return >= 0 ? '+' : ''}{record.oos_buy_hold_return.toFixed(2)}%</span>
         </>
       )
     }
@@ -928,7 +928,7 @@ const Backtest: React.FC = () => {
                   （{METRIC_LABEL[optResult.metric] || optResult.metric} {Number(optResult.best.sharpe_ratio).toFixed(2)}）
                 </Tag>
                 <ReactEChartsCore echarts={echarts} option={getOptimizeHeatmapOption()} style={{ height: 320 }} />
-                <div style={{ margin: '8px 0 4px', color: '#8c8c8c' }}>
+                <div style={{ margin: '8px 0 4px', color: '#595959' }}>
                   热力图：x={optResult.heatmap.x_name}，y={optResult.heatmap.y_name}，颜色=夏普比率；下表为Top5最优参数组合
                 </div>
                 <Table
@@ -1104,7 +1104,7 @@ const Backtest: React.FC = () => {
             </>
           ) : (
             <Card>
-              <div style={{ textAlign: 'center', padding: 50, color: '#999' }}>
+              <div style={{ textAlign: 'center', padding: 50, color: '#595959' }}>
                 配置参数后点击"开始回测"
               </div>
             </Card>

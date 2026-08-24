@@ -259,7 +259,7 @@ const Portfolio: React.FC = () => {
       render: (_: any, r: Position) => (
         <Space>
           <Tooltip title="修改买入价/数量/止损止盈">
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
+            <Button size="small" aria-label="修改持仓" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
           </Tooltip>
           <Tooltip title="卖出">
             <Button type="primary" size="small" danger icon={<ThunderboltFilled />}
@@ -268,7 +268,7 @@ const Portfolio: React.FC = () => {
             </Button>
           </Tooltip>
           <Popconfirm title="确定删除该记录吗？" onConfirm={() => handleDelete(r.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            <Button type="link" size="small" danger aria-label="删除持仓" icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       )
@@ -299,7 +299,7 @@ const Portfolio: React.FC = () => {
       title: '操作', key: 'action', width: 70,
       render: (_: any, r: Position) => (
         <Popconfirm title="删除该历史记录？" onConfirm={() => handleDelete(r.id)}>
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+          <Button type="link" size="small" danger aria-label="删除历史记录" icon={<DeleteOutlined />} />
         </Popconfirm>
       )
     }
@@ -455,12 +455,12 @@ const Portfolio: React.FC = () => {
               }}
               style={{ height: 260 }}
             />
-            <div style={{ fontSize: 12, color: '#999' }}>
+            <div style={{ fontSize: 12, color: '#595959' }}>
               快照由后台监控任务在每个交易时段自动写入（同日取最新值）
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: 30, color: '#999' }}>
+          <div style={{ textAlign: 'center', padding: 30, color: '#595959' }}>
             暂无快照数据——后台监控任务会在交易时段自动记录每日组合市值，累积几天后这里会出现曲线
           </div>
         )}
