@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Card, Input, Select, Button, Row, Col, Form, InputNumber, DatePicker, Table, Tag, Statistic, Space, message, Descriptions, Divider } from 'antd';
 import { SearchOutlined, ExperimentOutlined, AimOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import ReactECharts from 'echarts-for-react';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
+import echarts from '../services/echarts';
 import { stockApi, backtestApi } from '../services/api';
 
 const { Search } = Input;
@@ -880,13 +881,13 @@ const Backtest: React.FC = () => {
 
           {backtestResult && (
             <Card title="📊 权益曲线">
-              <ReactECharts option={getEquityCurveOption()} style={{ height: 300 }} />
+              <ReactEChartsCore echarts={echarts} option={getEquityCurveOption()} style={{ height: 300 }} />
             </Card>
           )}
 
           {compareResult && (
             <Card title={`⚡ 4策略对比 vs 买入持有 · ${compareResult.stock_code}`} style={{ marginTop: 16 }}>
-              <ReactECharts option={getCompareChartOption()} style={{ height: 380 }} />
+              <ReactEChartsCore echarts={echarts} option={getCompareChartOption()} style={{ height: 380 }} />
               <Table
                 style={{ marginTop: 16 }}
                 columns={compareColumns}
@@ -926,7 +927,7 @@ const Backtest: React.FC = () => {
                   最优参数：{fmtParams(optResult.best.params)}
                   （{METRIC_LABEL[optResult.metric] || optResult.metric} {Number(optResult.best.sharpe_ratio).toFixed(2)}）
                 </Tag>
-                <ReactECharts option={getOptimizeHeatmapOption()} style={{ height: 320 }} />
+                <ReactEChartsCore echarts={echarts} option={getOptimizeHeatmapOption()} style={{ height: 320 }} />
                 <div style={{ margin: '8px 0 4px', color: '#8c8c8c' }}>
                   热力图：x={optResult.heatmap.x_name}，y={optResult.heatmap.y_name}，颜色=夏普比率；下表为Top5最优参数组合
                 </div>
@@ -985,7 +986,7 @@ const Backtest: React.FC = () => {
                     {wfResult.summary.win_segments}/{wfResult.summary.total_segments}
                   </Descriptions.Item>
                 </Descriptions>
-                <ReactECharts option={getWalkForwardChartOption()} style={{ height: 320 }} />
+                <ReactEChartsCore echarts={echarts} option={getWalkForwardChartOption()} style={{ height: 320 }} />
                 <Table
                   style={{ marginTop: 16 }}
                   columns={wfColumns}

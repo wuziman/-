@@ -1,13 +1,16 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import MainLayout from './components/MainLayout';
 import ErrorBoundary from './components/ErrorBoundary';
-import Home from './pages/Home';
-import Analysis from './pages/Analysis';
-import Portfolio from './pages/Portfolio';
-import Backtest from './pages/Backtest';
-import AIPick from './pages/AIPick';
+
+// 路由级代码分割：首页不再打包回测/分析页与echarts，进入对应页面时才加载
+const Home = lazy(() => import('./pages/Home'));
+const Analysis = lazy(() => import('./pages/Analysis'));
+const Portfolio = lazy(() => import('./pages/Portfolio'));
+const Backtest = lazy(() => import('./pages/Backtest'));
+const AIPick = lazy(() => import('./pages/AIPick'));
 
 function App() {
   return (
@@ -15,13 +18,21 @@ function App() {
       <Router>
         <MainLayout>
           <ErrorBoundary>
-            <Routes>
+            <Suspense
+              fallback={
+                <div style={{ textAlign: 'center', padding: 80 }}>
+                  <Spin size="large" />
+                </div>
+              }
+            >
+              <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/analysis" element={<Analysis />} />
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/backtest" element={<Backtest />} />
               <Route path="/ai-pick" element={<AIPick />} />
-            </Routes>
+              </Routes>
+            </Suspense>
           </ErrorBoundary>
         </MainLayout>
       </Router>

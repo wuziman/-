@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card, Input, Select, Button, Row, Col, Tag, message, Descriptions, Progress, Space, Divider, Tabs, Checkbox, Alert, Table } from 'antd';
 import { SearchOutlined, StarOutlined, StarFilled, LineChartOutlined } from '@ant-design/icons';
-import ReactECharts from 'echarts-for-react';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
+import echarts from '../services/echarts';
 import { stockApi, analysisApi } from '../services/api';
 import { patternApi, SignalsResult } from '../services/patternApi';
 import { trackingApi, TrackingResult } from '../services/trackingApi';
@@ -467,7 +468,7 @@ const Analysis: React.FC = () => {
           </Tag>
         </Space>
 
-        <ReactECharts option={getTrackingOption()} style={{ height: 220 }} notMerge />
+        <ReactEChartsCore echarts={echarts} option={getTrackingOption()} style={{ height: 220 }} notMerge />
 
         <Divider style={{ margin: '8px 0' }} />
         <Table
@@ -589,7 +590,7 @@ const Analysis: React.FC = () => {
                       布林带 BOLL
                     </Checkbox>
                   </div>
-                  <ReactECharts option={getCandlestickOption()} style={{ height: 440 }} />
+                  <ReactEChartsCore echarts={echarts} option={getCandlestickOption()} style={{ height: 440 }} />
                 </>
               ) : historyError ? (
                 <div style={{ textAlign: 'center', padding: 50 }}>

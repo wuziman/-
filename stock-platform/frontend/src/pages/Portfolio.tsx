@@ -3,7 +3,8 @@ import { Card, Table, Button, Modal, Form, Input, InputNumber, DatePicker, Tag, 
 import { PlusOutlined, DeleteOutlined, EditOutlined, ThunderboltFilled, WarningFilled, SettingOutlined } from '@ant-design/icons';
 import { portfolioApi } from '../services/api';
 import dayjs from 'dayjs';
-import ReactECharts from 'echarts-for-react';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
+import echarts from '../services/echarts';
 
 interface Position {
   id: number;
@@ -435,7 +436,8 @@ const Portfolio: React.FC = () => {
                 message={`⛔ 当前回撤 -${ddStats.current_drawdown_pct}%，已超过20%组合风控线，请审视整体仓位`}
               />
             )}
-            <ReactECharts
+            <ReactEChartsCore
+              echarts={echarts}
               option={{
                 tooltip: { trigger: 'axis' },
                 grid: { left: 70, right: 20, top: 20, bottom: 30 },

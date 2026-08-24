@@ -10,7 +10,8 @@ import {
   ThunderboltOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import ReactECharts from 'echarts-for-react';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
+import echarts from '../services/echarts';
 import { portfolioApi, stockApi, reportApi } from '../services/api';
 import { scheduleApi } from '../services/scheduleApi';
 
@@ -270,7 +271,7 @@ const Home: React.FC = () => {
         <Col span={12}>
           <Card title="📈 持仓分布" style={{ height: 420 }}>
             {summary && summary.total_positions > 0 ? (
-              <ReactECharts option={getPortfolioChartOption()} style={{ height: 320 }} />
+              <ReactEChartsCore echarts={echarts} option={getPortfolioChartOption()} style={{ height: 320 }} />
             ) : (
               <div style={{ textAlign: 'center', padding: 50, color: '#999' }}>暂无持仓数据</div>
             )}
