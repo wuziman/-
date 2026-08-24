@@ -365,13 +365,13 @@ const Portfolio: React.FC = () => {
 
       {/* ===== 总览统计 ===== */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={4}>
+        <Col xs={12} md={8} lg={4}>
           <Card><Statistic title="持仓数量" value={summary?.total_positions || 0} /></Card>
         </Col>
-        <Col span={5}>
+        <Col xs={12} md={8} lg={5}>
           <Card><Statistic title="持仓市值" value={summary?.total_value || 0} precision={2} prefix="$" /></Card>
         </Col>
-        <Col span={5}>
+        <Col xs={12} md={8} lg={5}>
           <Card>
             <Statistic
               title="浮动盈亏"
@@ -380,7 +380,7 @@ const Portfolio: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={5}>
+        <Col xs={12} md={8} lg={5}>
           <Card>
             <Statistic
               title="收益率"
@@ -389,7 +389,7 @@ const Portfolio: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={5}>
+        <Col xs={12} md={8} lg={5}>
           <Card>
             <Statistic
               title="现金比例"
@@ -533,6 +533,8 @@ const Portfolio: React.FC = () => {
         onOk={handleSellSubmit}
         onCancel={() => setSellModalVisible(false)}
         okText="确认卖出"
+        width="92%"
+        style={{ maxWidth: 520 }}
       >
         {sellingPosition && (
           <Alert
@@ -563,7 +565,8 @@ const Portfolio: React.FC = () => {
         open={editModalVisible}
         onOk={handleSubmit}
         onCancel={() => setEditModalVisible(false)}
-        width={600}
+        width="92%"
+        style={{ maxWidth: 600 }}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="stock_code" label="股票代码" rules={[{ required: true, message: '请输入股票代码' }]}>

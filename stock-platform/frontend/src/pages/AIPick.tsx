@@ -390,7 +390,8 @@ const AIPick: React.FC = () => {
         onOk={handleSaveXhs}
         confirmLoading={savingXhs}
         okText="保存"
-        width={560}
+        width="92%"
+        style={{ maxWidth: 560 }}
       >
         <p style={{ fontSize: 13 }}>
           博主列表（每行一条，格式：<code>显示名|主页链接</code>）：

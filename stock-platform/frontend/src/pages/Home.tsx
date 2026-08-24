@@ -226,13 +226,13 @@ const Home: React.FC = () => {
       </Row>
 
       <Row gutter={16} style={{ marginTop: 16 }}>
-        <Col span={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card><Statistic title="持仓数量" value={summary?.total_positions || 0} prefix={<StockOutlined />} /></Card>
         </Col>
-        <Col span={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card><Statistic title="持仓市值" value={summary?.total_value || 0} precision={2} prefix="$" /></Card>
         </Col>
-        <Col span={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card>
             <Statistic
               title="总盈亏"
@@ -244,7 +244,7 @@ const Home: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card>
             <Statistic
               title="收益率"
@@ -268,7 +268,7 @@ const Home: React.FC = () => {
       )}
 
       <Row gutter={16} style={{ marginTop: 16 }}>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Card title="📈 持仓分布" style={{ height: 420 }}>
             {summary && summary.total_positions > 0 ? (
               <ReactEChartsCore echarts={echarts} option={getPortfolioChartOption()} style={{ height: 320 }} />
@@ -277,7 +277,7 @@ const Home: React.FC = () => {
             )}
           </Card>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Card title="⭐ 自选股" style={{ height: 420 }}>
             <Table
               dataSource={watchlist}
@@ -377,7 +377,8 @@ const Home: React.FC = () => {
             推送到企业微信
           </Button>
         ]}
-        width={640}
+        width="92%"
+        style={{ maxWidth: 640 }}
       >
         {reportMeta && (
           <Alert
