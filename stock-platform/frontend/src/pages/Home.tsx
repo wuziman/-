@@ -12,7 +12,7 @@ import {
 import dayjs from 'dayjs';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../services/echarts';
-import { portfolioApi, stockApi, reportApi } from '../services/api';
+import { portfolioApi, stockApi, reportApi, errDetail } from '../services/api';
 import { scheduleApi } from '../services/scheduleApi';
 import { colors } from '../theme/tokens';
 
@@ -22,6 +22,7 @@ interface PositionSummary {
   total_cost: number;
   total_profit: number;
   total_profit_pct: number;
+  total_capital: number;
   cash_pct: number | null;
   warnings: Array<{ level: string; message: string }>;
 }
@@ -107,8 +108,8 @@ const Home: React.FC = () => {
           ? `已保存：工作日 ${schedTime.format('HH:mm')} 自动推送日报`
           : '已保存：自动推送已关闭'
       );
-    } catch (error: any) {
-      message.error(error?.response?.data?.detail || '保存失败');
+    } catch (error) {
+      message.error(errDetail(error, '保存失败'));
     } finally {
       setSavingSchedule(false);
     }
@@ -130,8 +131,8 @@ const Home: React.FC = () => {
           } else {
             message.error(res.data.message || '推送失败');
           }
-        } catch (error: any) {
-          message.error(error?.response?.data?.message || error?.response?.data?.detail || '推送失败');
+        } catch (error) {
+          message.error(errDetail(error, '推送失败'));
         } finally {
           setRunningNow(false);
         }
@@ -147,8 +148,8 @@ const Home: React.FC = () => {
       const res = await reportApi.preview();
       setReportText(res.data.report);
       setReportMeta({ sent: false, message: '预览模式（未推送）', char_count: res.data.char_count });
-    } catch (error: any) {
-      const detail = error?.response?.data?.detail || '生成失败';
+    } catch (error) {
+      const detail = errDetail(error, '生成失败');
       message.error(detail);
       setReportText(`生成失败：${detail}`);
       setReportMeta(null);
@@ -176,8 +177,8 @@ const Home: React.FC = () => {
           } else {
             message.error(res.data.message || '推送失败');
           }
-        } catch (error: any) {
-          const detail = error?.response?.data?.detail || error?.response?.data?.message || '推送失败';
+        } catch (error) {
+          const detail = errDetail(error, '推送失败');
           message.error(detail);
         } finally {
           setSending(false);
@@ -196,16 +197,23 @@ const Home: React.FC = () => {
 
   const getPortfolioChartOption = () => {
     if (!summary) return {};
+    // 资产分布 = 持仓市值 + 现金。此前把"浮动亏损"（已含在市值内）与市值并列，
+    // 既双重计数又误用绿色切片，与全页盈亏语义冲突
+    const capital = summary.total_capital || 0;
+    const data: Array<{ value: number; name: string; itemStyle: { color: string } }> = [
+      { value: Math.max(summary.total_value, 0), name: '持仓市值', itemStyle: { color: colors.primary } },
+    ];
+    if (capital > 0) {
+      data.push({ value: Math.max(capital - summary.total_value, 0), name: '现金', itemStyle: { color: colors.chartNeutral } });
+    }
     return {
       tooltip: { trigger: 'item' },
+      legend: { bottom: 0 },
       series: [{
-        name: '持仓分布',
+        name: '资产分布',
         type: 'pie',
         radius: '50%',
-        data: [
-          { value: Math.max(summary.total_value, 0), name: '持仓市值' },
-          ...(summary.total_profit < 0 ? [{ value: Math.abs(summary.total_profit), name: '浮动亏损' }] : []),
-        ],
+        data,
         emphasis: {
           itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }
         }
@@ -282,7 +290,7 @@ const Home: React.FC = () => {
 
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col xs={24} sm={12}>
-          <Card title="📈 持仓分布" style={{ height: 420 }}>
+          <Card title="📈 资产分布" style={{ height: 420 }}>
             {summary && summary.total_positions > 0 ? (
               <ReactEChartsCore echarts={echarts} option={getPortfolioChartOption()} style={{ height: 320 }} />
             ) : (

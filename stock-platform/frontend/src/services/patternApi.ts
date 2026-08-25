@@ -1,10 +1,4 @@
-import axios from 'axios';
-
-// 独立的axios实例（技术信号专用，不依赖services/api.ts）
-const patternAxios = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
-});
+import api from './api';
 
 // K线形态
 export interface PatternSignal {
@@ -40,7 +34,7 @@ export interface SignalsResult {
 // 技术信号API
 export const patternApi = {
   getSignals: (code: string, market: string = 'US', period: string = '3mo') =>
-    patternAxios.get(`/stocks/${code}/signals`, { params: { market, period } }),
+    api.get<SignalsResult>(`/stocks/${code}/signals`, { params: { market, period } }),
 };
 
 export default patternApi;

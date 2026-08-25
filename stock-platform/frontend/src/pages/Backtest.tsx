@@ -28,6 +28,7 @@ interface BacktestResult {
   final_value: number;
   equity_curve: Array<{ date: string; value: number }>;
   period: string;
+  date_range?: string;   // 自定义起止日期时由后端返回实际窗口
   trades: Array<{
     date: string;
     action: string;
@@ -184,6 +185,7 @@ const Backtest: React.FC = () => {
     setWfResult(null);
   };
   const [form] = Form.useForm();
+  const dateRangeWatch = Form.useWatch('date_range', form);   // 自定义时间段优先于周期
 
   const fetchStrategies = async () => {
     try {
@@ -823,9 +825,9 @@ const Backtest: React.FC = () => {
 
               <Row gutter={16}>
                 <Col xs={24} md={8}>
-                  <Form.Item name="period" label="回测周期" initialValue="1y">
+                  <Form.Item name="period" label="回测周期">
                     <Select
-                      onChange={(v) => form.setFieldValue('period', v)}
+                      disabled={!!dateRangeWatch}
                       options={[
                         { value: '1y', label: '近1年' },
                         { value: '3y', label: '近3年' },
@@ -890,12 +892,13 @@ const Backtest: React.FC = () => {
             <Card title={`⚡ 4策略对比 vs 买入持有 · ${compareResult.stock_code}`} style={{ marginTop: 16 }}>
               <ReactEChartsCore echarts={echarts} option={getCompareChartOption()} style={{ height: 380 }} />
               <Table
-                style={{ marginTop: 16 }}
+                style={{ marginTop: 16, whiteSpace: 'nowrap' }}
                 columns={compareColumns}
                 dataSource={compareResult.comparison}
                 rowKey="key"
                 pagination={false}
                 size="small"
+                scroll={{ x: 'max-content' }}
               />
             </Card>
           )}
@@ -933,11 +936,13 @@ const Backtest: React.FC = () => {
                   热力图：x={optResult.heatmap.x_name}，y={optResult.heatmap.y_name}，颜色=夏普比率；下表为Top5最优参数组合
                 </div>
                 <Table
+                  style={{ whiteSpace: 'nowrap' }}
                   columns={optimizeColumns}
                   dataSource={optResult.results.slice(0, 5)}
                   rowKey={(r) => fmtParams(r.params)}
                   pagination={false}
                   size="small"
+                  scroll={{ x: 'max-content' }}
                 />
               </>
             )}
@@ -989,12 +994,13 @@ const Backtest: React.FC = () => {
                 </Descriptions>
                 <ReactEChartsCore echarts={echarts} option={getWalkForwardChartOption()} style={{ height: 320 }} />
                 <Table
-                  style={{ marginTop: 16 }}
+                  style={{ marginTop: 16, whiteSpace: 'nowrap' }}
                   columns={wfColumns}
                   dataSource={wfResult.segments}
                   rowKey="step"
                   pagination={false}
                   size="small"
+                  scroll={{ x: 'max-content' }}
                 />
               </>
             )}
@@ -1013,7 +1019,9 @@ const Backtest: React.FC = () => {
                     {strategies.find(s => s.id === backtestResult.strategy)?.name}
                   </Descriptions.Item>
                   <Descriptions.Item label="回测周期">
-                    {backtestResult.period === '3y' ? '近3年' : backtestResult.period === '5y' ? '近5年' : '近1年'}
+                    {backtestResult.date_range
+                      ? backtestResult.date_range
+                      : backtestResult.period === '3y' ? '近3年' : backtestResult.period === '5y' ? '近5年' : '近1年'}
                   </Descriptions.Item>
                 </Descriptions>
 
@@ -1109,12 +1117,13 @@ const Backtest: React.FC = () => {
 
               <Card title="📝 交易记录">
                 <Table
+                  style={{ whiteSpace: 'nowrap' }}
                   columns={tradeColumns}
                   dataSource={backtestResult.trades}
                   rowKey={(record) => `${record.date}-${record.action}-${record.price}`}
                   pagination={false}
                   size="small"
-                  scroll={{ y: 300 }}
+                  scroll={{ x: 'max-content', y: 300 }}
                 />
               </Card>
             </>

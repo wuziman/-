@@ -5,13 +5,16 @@ const api = axios.create({
   timeout: 30000,
 });
 
+// 从 axios 错误中提取后端 detail/message，取不到用 fallback（全站统一错误文案出口）
+export function errDetail(e: unknown, fallback = '请求失败'): string {
+  const resp = (e as { response?: { data?: { detail?: string; message?: string } } })?.response;
+  return resp?.data?.detail || resp?.data?.message || fallback;
+}
+
 // 股票相关API
 export const stockApi = {
   search: (query: string, market: string = 'all') =>
     api.get('/stocks/search', { params: { q: query, market } }),
-
-  getQuote: (code: string, market: string = 'US') =>
-    api.get(`/stocks/${code}/quote`, { params: { market } }),
 
   getHistory: (code: string, market: string = 'US', period: string = '3mo') =>
     api.get(`/stocks/${code}/history`, { params: { market, period } }),
@@ -25,24 +28,12 @@ export const stockApi = {
 
   addToWatchlist: (data: { stock_code: string; stock_name: string; market: string }) =>
     api.post('/stocks/watchlist', data),
-
-  removeFromWatchlist: (id: number) =>
-    api.delete(`/stocks/watchlist/${id}`),
 };
 
 // 分析相关API
 export const analysisApi = {
   analyze: (data: { stock_code: string; stock_name: string; mode?: string }) =>
     api.post('/analysis', data),
-
-  saveAnalysis: (data: any) =>
-    api.post('/analysis/save', data),
-
-  getHistory: (stockCode?: string, limit: number = 20) =>
-    api.get('/analysis/history', { params: { stock_code: stockCode, limit } }),
-
-  getDetail: (id: number) =>
-    api.get(`/analysis/history/${id}`),
 };
 
 // 回测相关API
@@ -159,9 +150,6 @@ export const aiPickApi = {
     api.put('/ai-pick/xhs-config', data),
 
   refreshXhs: () => api.post('/ai-pick/xhs-refresh', null, { timeout: 120000 }),
-
-  listXhsPosts: (limit: number = 20) =>
-    api.post('/ai-pick/xhs-posts', { limit }),
 
   getXhsSummaries: () => api.get('/ai-pick/xhs-summaries'),
 

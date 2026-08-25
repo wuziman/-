@@ -263,17 +263,18 @@ const Analysis: React.FC = () => {
 
     if (showMA) {
       series.push(
-        { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma5), symbol: 'none', lineStyle: { width: 1, color: colors.ma5 } },
-        { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma20), symbol: 'none', lineStyle: { width: 1.5, color: colors.primary } },
-        { name: 'MA50', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.ma50), symbol: 'none', lineStyle: { width: 1.5, color: colors.chartPurple } },
+        // 系列级 color 必须与 lineStyle.color 一致，否则图例回落默认调色板（图例色≠线色）
+        { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.ma5, data: historyData.map((d: any) => d.ma5), symbol: 'none', lineStyle: { width: 1, color: colors.ma5 } },
+        { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.primary, data: historyData.map((d: any) => d.ma20), symbol: 'none', lineStyle: { width: 1.5, color: colors.primary } },
+        { name: 'MA50', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.chartPurple, data: historyData.map((d: any) => d.ma50), symbol: 'none', lineStyle: { width: 1.5, color: colors.chartPurple } },
       );
     }
 
     if (showBOLL) {
       series.push(
-        { name: 'BOLL上轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.bb_upper), symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#999' } },
-        { name: 'BOLL中轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.bb_mid), symbol: 'none', lineStyle: { width: 1, type: 'dotted', color: '#bbb' } },
-        { name: 'BOLL下轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: historyData.map((d: any) => d.bb_lower), symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#999' } },
+        { name: 'BOLL上轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#999', data: historyData.map((d: any) => d.bb_upper), symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#999' } },
+        { name: 'BOLL中轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#bbb', data: historyData.map((d: any) => d.bb_mid), symbol: 'none', lineStyle: { width: 1, type: 'dotted', color: '#bbb' } },
+        { name: 'BOLL下轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#999', data: historyData.map((d: any) => d.bb_lower), symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#999' } },
       );
     }
 

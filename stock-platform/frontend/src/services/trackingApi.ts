@@ -1,10 +1,4 @@
-import axios from 'axios';
-
-// 独立的axios实例（评分追踪专用，不依赖services/api.ts）
-const trackingAxios = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
-});
+import api from './api';
 
 // 单条评分记录（含至今收益）
 export interface TrackingRecord {
@@ -35,7 +29,7 @@ export interface TrackingResult {
 // 评分追踪API
 export const trackingApi = {
   getTracking: (code: string) =>
-    trackingAxios.get<TrackingResult>('/analysis/tracking', { params: { stock_code: code } }),
+    api.get<TrackingResult>('/analysis/tracking', { params: { stock_code: code } }),
 };
 
 export default trackingApi;

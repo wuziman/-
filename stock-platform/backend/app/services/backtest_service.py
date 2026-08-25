@@ -79,11 +79,15 @@ class BacktestService:
         if len(df) < 51:
             return {'error': '数据不足'}
 
-        return self._execute_backtest(
+        result = self._execute_backtest(
             df=df, strategy=strategy, stock_code=stock_code,
             initial_capital=initial_capital, period=period,
             commission_per_trade=commission_per_trade,
         )
+        if start_date or end_date:
+            # 自定义区间时返回实际窗口，前端据此展示，避免错标成"近1年"
+            result['date_range'] = f"{start_date or '起始'} ~ {end_date or '至今'}"
+        return result
 
     def _execute_backtest(self, df: pd.DataFrame, strategy: str, stock_code: str,
                           initial_capital: float, period: str,

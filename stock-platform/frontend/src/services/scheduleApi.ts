@@ -1,12 +1,6 @@
-import axios from 'axios';
+import api from './api';
 
-// 独立axios实例（不依赖api.ts）
-const api = axios.create({
-  baseURL: '/api',
-  timeout: 60000, // run-now需实时拉取全部自选股数据，超时放宽
-});
-
-// 定时自动日报API
+// 定时自动日报API（run-now需实时拉取全部自选股数据，超时放宽到60s）
 export const scheduleApi = {
   getSchedule: () =>
     api.get('/report/schedule'),
@@ -15,7 +9,7 @@ export const scheduleApi = {
     api.put('/report/schedule', data),
 
   runNow: () =>
-    api.post('/report/run-now'),
+    api.post('/report/run-now', null, { timeout: 60000 }),
 };
 
-export default api;
+export default scheduleApi;

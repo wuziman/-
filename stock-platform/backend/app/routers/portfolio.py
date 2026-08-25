@@ -7,6 +7,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List, Tuple
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from ..database import get_db
 from ..models import Position, Setting
@@ -41,18 +42,25 @@ def _realized_pnl(sell_price: float, buy_price: float, quantity: float) -> Tuple
     return round(pnl, 2), round(pct, 2)
 
 
+def _fetch_quotes(positions: List[Position]) -> list:
+    """并行拉取全部持仓实时行情（美股 yfinance .info 单次秒级，串行会随持仓数线性放大）"""
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        return list(executor.map(
+            lambda p: stock_service.get_realtime_quote(p.stock_code, detect_market(p.stock_code)),
+            positions
+        ))
+
+
 @router.get("", response_model=List[PositionResponse])
 def get_positions(db: Session = Depends(get_db)):
     """获取当前持仓列表（含实时盈亏 + 止损止盈触发状态）"""
     positions = db.query(Position).filter(Position.status == "holding").all()
-    return [_enrich_holding(pos) for pos in positions]
+    quotes = _fetch_quotes(positions)
+    return [_enrich_holding(pos, quote) for pos, quote in zip(positions, quotes)]
 
 
-def _enrich_holding(pos: Position) -> PositionResponse:
-    market = detect_market(pos.stock_code)
-    quote = stock_service.get_realtime_quote(pos.stock_code, market)
-
-    current_price = quote['price'] if quote else pos.buy_price
+def _enrich_holding(pos: Position, quote) -> PositionResponse:
+    current_price = (quote or {}).get('price') or pos.buy_price
     profit_loss = (current_price - pos.buy_price) * pos.quantity
     profit_loss_pct = (current_price - pos.buy_price) / pos.buy_price * 100 if pos.buy_price else 0
 
@@ -231,10 +239,9 @@ def get_portfolio_summary(db: Session = Depends(get_db)):
     total_cost = 0.0
     per_stock_value = {}
 
-    for pos in positions:
-        market = detect_market(pos.stock_code)
-        quote = stock_service.get_realtime_quote(pos.stock_code, market)
-        current_price = quote['price'] if quote else pos.buy_price
+    quotes = _fetch_quotes(positions)
+    for pos, quote in zip(positions, quotes):
+        current_price = (quote or {}).get('price') or pos.buy_price
         value = current_price * pos.quantity
         total_value += value
         total_cost += pos.buy_price * pos.quantity

@@ -6,7 +6,7 @@ import {
 import {
   FileTextOutlined, ReloadOutlined, SettingOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
-import { aiPickApi } from '../services/api';
+import { aiPickApi, errDetail } from '../services/api';
 import { colors } from '../theme/tokens';
 
 const { TextArea } = Input;
@@ -117,8 +117,8 @@ const AIPick: React.FC = () => {
       const fail = res.data.errors?.length || 0;
       message.success(`博主总结完成：${ok}位成功${fail ? `，${fail}位失败` : ''}`);
       await fetchSummaries();
-    } catch (error: any) {
-      const detail = error?.response?.data?.detail || '博主总结生成失败';
+    } catch (error) {
+      const detail = errDetail(error, '博主总结生成失败');
       message.error(String(detail).slice(0, 120));
     } finally {
       setGeneratingSummaries(false);
@@ -146,8 +146,8 @@ const AIPick: React.FC = () => {
           const res = await aiPickApi.run();
           message.success(`AI选股完成：${res.data.picks.length}只入选`);
           await Promise.all([fetchStatus(), fetchHistory()]);
-        } catch (error: any) {
-          const detail = error?.response?.data?.detail || 'AI选股失败';
+        } catch (error) {
+          const detail = errDetail(error, 'AI选股失败');
           message.error(String(detail).slice(0, 120));
         } finally {
           setRunning(false);
@@ -207,8 +207,8 @@ const AIPick: React.FC = () => {
       message.success(`抓取完成：${total}条笔记，新增${res.data.new_posts}条入库`);
       fetchStatus();
       generateSummaries(true);   // 抓取成功后自动生成博主总结（未配AI时静默跳过）
-    } catch (error: any) {
-      message.error(error?.response?.data?.detail || '抓取失败');
+    } catch (error) {
+      message.error(errDetail(error, '抓取失败'));
     } finally {
       setRefreshingXhs(false);
     }
