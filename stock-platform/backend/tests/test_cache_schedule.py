@@ -70,7 +70,7 @@ class TestKlineCache:
 
         monkeypatch.setattr(stock_service, '_fetch_kline', fake_fetch)
 
-        df1 = StockService.get_stock_data(TEST_CODE, 'US', '3mo')
+        df1 = StockService.get_stock_data(TEST_CODE, 'US', '3mo')  # noqa: F841 -- 触发首次取数并写入缓存
         assert len(calls) == 1
 
         df2 = StockService.get_stock_data(TEST_CODE, 'US', '3mo')

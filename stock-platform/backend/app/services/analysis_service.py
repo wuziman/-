@@ -14,7 +14,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import requests
-from typing import Dict, Tuple, Any, List, Optional
+from typing import Dict, Tuple, Any, List
 from .stock_service import StockService, _get_cn_session
 from .tech_score import calculate_tech_score
 from ..utils.indicators import calculate_all_indicators

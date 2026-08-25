@@ -3,7 +3,6 @@
 支持A股（腾讯/东财前复权日K，新浪不复权兜底）和美股（YFinance）
 """
 
-import os
 import re
 import json
 import yfinance as yf

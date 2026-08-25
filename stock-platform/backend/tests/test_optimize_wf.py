@@ -17,7 +17,6 @@ from app.services.backtest_service import (
     BacktestService,
     PARAM_GRIDS,
     DEFAULT_PARAMS,
-    METRIC_FIELDS,
 )
 from app.utils.indicators import calculate_all_indicators
 

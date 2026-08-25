@@ -8,6 +8,7 @@ from sqlalchemy import text
 from .database import engine, Base
 from .routers import stocks_router, analysis_router, backtest_router, portfolio_router, report_router
 from .routers.ai_pick import router as ai_pick_router
+from .services.scheduler_service import start_scheduler
 from . import models_platform  # noqa: F401  注册平台扩展表模型（须在create_all之前导入）
 
 # 创建数据库表
@@ -76,9 +77,6 @@ async def health_check():
 # ============================================
 # 后台定时调度器（自动日报）
 # ============================================
-from .services.scheduler_service import start_scheduler
-
-
 @app.on_event("startup")
 async def _start_background_scheduler():
     """应用启动时开启定时调度（每30分钟检查一次日报推送窗口）"""

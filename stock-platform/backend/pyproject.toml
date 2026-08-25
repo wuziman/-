@@ -1,0 +1,13 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# E4/E7/E9+F 为 ruff 默认集：F821(未定义名称)正是本次 detect_market 重构漏改能被拦住的规则
+select = ["E4", "E7", "E9", "F"]
+# E741: K线数据惯用 o/h/l/c 命名，`l` 表示 low，属领域惯例而非隐患
+ignore = ["E741"]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__.py 的导入是有意 re-export
+"**/__init__.py" = ["F401"]

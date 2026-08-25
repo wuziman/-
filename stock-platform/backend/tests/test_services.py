@@ -90,7 +90,6 @@ class TestSinaNewsParsing:
 
     def test_service_parse_matches_fixture(self):
         """AnalysisService._fetch_news_cn 的正则应能解析同样的fixture格式"""
-        svc = AnalysisService()
         import re
         # 直接复用服务内的pattern（从方法源码中提取同款正则做一致性校验）
         sep = r"(?:\s|&nbsp;|#xa0;|\xa0)*"

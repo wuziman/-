@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 import requests
 import pandas as pd
 
-from .stock_service import StockService, _get_cn_session
+from .stock_service import StockService
 from .tech_score import calculate_tech_score
 from ..utils.indicators import calculate_all_indicators
 from ..utils.market import detect_market
@@ -182,7 +182,7 @@ class ReportService:
                     f"入场=金叉 损{s['macd_stop']}"
                 )
             else:
-                lines.append(f"MACD: 数据不足")
+                lines.append("MACD: 数据不足")
             lines.append('')
 
         if failed:

@@ -3,7 +3,6 @@
 """
 
 from fastapi import APIRouter, HTTPException
-from typing import List
 from ..schemas import (BacktestRequest, BacktestResponse, BacktestCompareRequest,
                        OptimizeRequest, WalkForwardRequest)
 from ..services.backtest_service import BacktestService

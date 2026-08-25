@@ -3,7 +3,6 @@
 """
 
 import pandas as pd
-import numpy as np
 
 
 def calculate_rsi(data: pd.Series, period: int = 14) -> pd.Series:

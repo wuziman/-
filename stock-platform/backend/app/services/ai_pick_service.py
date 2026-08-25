@@ -10,7 +10,7 @@ import json
 import logging
 import re
 from datetime import date, datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import yfinance as yf
 from sqlalchemy.orm import Session
