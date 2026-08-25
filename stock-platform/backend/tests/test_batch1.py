@@ -99,11 +99,11 @@ class TestRiskRules:
         assert url == '' or url.startswith('https://qyapi.weixin.qq.com')
 
     def test_market_detection(self):
-        from app.services.report_service import _detect_market
-        assert _detect_market('002594') == 'A'
-        assert _detect_market('600519.SH') == 'A'
-        assert _detect_market('MU') == 'US'
-        assert _detect_market('AAPL') == 'US'
+        from app.utils.market import detect_market
+        assert detect_market('002594') == 'A'
+        assert detect_market('600519.SH') == 'A'
+        assert detect_market('MU') == 'US'
+        assert detect_market('AAPL') == 'US'
 
 
 class TestPositionPnlMath:

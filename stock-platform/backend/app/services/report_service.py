@@ -16,6 +16,7 @@ import pandas as pd
 from .stock_service import StockService, _get_cn_session
 from .tech_score import calculate_tech_score
 from ..utils.indicators import calculate_all_indicators
+from ..utils.market import detect_market
 
 
 def _load_webhook() -> str:
@@ -31,10 +32,6 @@ def _load_webhook() -> str:
         return ''
 
 
-def _detect_market(stock_code: str) -> str:
-    return "A" if stock_code.isdigit() or "." in stock_code else "US"
-
-
 class ReportService:
     """每日报告服务"""
 
@@ -45,7 +42,7 @@ class ReportService:
     # 单只股票：三策略快照（轻量，不拉新闻）
     # ============================================
     def _stock_snapshot(self, stock_code: str, stock_name: str) -> Optional[Dict]:
-        market = _detect_market(stock_code)
+        market = detect_market(stock_code)
         df = self.stock_service.get_stock_data(stock_code, market, period="3mo")
         if df is None or df.empty:
             return None

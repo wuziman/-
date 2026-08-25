@@ -8,6 +8,7 @@
 
 import re
 import json
+import logging
 import os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -17,6 +18,8 @@ from typing import Dict, Tuple, Any, List, Optional
 from .stock_service import StockService, _get_cn_session
 from .tech_score import calculate_tech_score
 from ..utils.indicators import calculate_all_indicators
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================
@@ -530,14 +533,15 @@ class AnalysisService:
                 },
                 'macd': macd_info
             }
-        except Exception as e:
-            print(f"计算策略点位失败: {e}")
+        except Exception:
+            # 指标数据不足等异常：返回null让前端显示占位符，绝不返回0元点位误导决策
+            logger.warning("计算策略点位失败", exc_info=True)
             return {
-                'current_price': 0,
-                'linear': {'buy': 0, 'stop': 0, 'profit': 0, 'distance': 0},
-                'nonlinear': {'buy': 0, 'stop': 0, 'profit': 0, 'distance': 0},
+                'current_price': None,
+                'linear': {'buy': None, 'stop': None, 'profit': None, 'distance': None},
+                'nonlinear': {'buy': None, 'stop': None, 'profit': None, 'distance': None},
                 'macd': {'state': 'unknown', 'days_in_state': 0, 'hist': 0,
-                         'add_price': None, 'stop': 0, 'note': '计算失败'}
+                         'add_price': None, 'stop': None, 'note': '计算失败'}
             }
 
     def _calculate_macd_levels(self, df: pd.DataFrame, latest: pd.Series) -> Dict:
@@ -592,14 +596,7 @@ class AnalysisService:
                 'stop': round(current_price * 0.92, 2),  # 纪律性止损-8%
                 'note': note
             }
-        except Exception as e:
-            print(f"计算MACD点位失败: {e}")
+        except Exception:
+            logger.warning("计算MACD点位失败", exc_info=True)
             return {'state': 'unknown', 'days_in_state': 0, 'hist': 0,
-                    'add_price': None, 'stop': 0, 'note': '计算失败'}
-        except Exception as e:
-            print(f"计算双策略点位失败: {e}")
-            return {
-                'current_price': 0,
-                'linear': {'buy': 0, 'stop': 0, 'profit': 0, 'distance': 0},
-                'nonlinear': {'buy': 0, 'stop': 0, 'profit': 0, 'distance': 0}
-            }
+                    'add_price': None, 'stop': None, 'note': '计算失败'}

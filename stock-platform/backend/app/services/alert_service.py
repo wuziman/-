@@ -19,6 +19,7 @@ from ..models import Position, Setting
 from ..models_platform import PriceAlertLog, PortfolioSnapshot
 from .report_service import ReportService
 from .stock_service import StockService
+from ..utils.market import detect_market
 
 logger = logging.getLogger(__name__)
 
@@ -73,10 +74,6 @@ def compute_drawdown_stats(values: List[float]) -> Dict:
     }
 
 
-def _detect_market(stock_code: str) -> str:
-    return "A" if stock_code.isdigit() or "." in stock_code else "US"
-
-
 # ============================================
 # 数据访问与主流程
 # ============================================
@@ -88,7 +85,7 @@ def _holding_quotes() -> List[Tuple[Position, float]]:
     try:
         positions = db.query(Position).filter(Position.status == "holding").all()
         for pos in positions:
-            market = pos.market or _detect_market(pos.stock_code)
+            market = pos.market or detect_market(pos.stock_code)
             try:
                 quote = svc.get_realtime_quote(pos.stock_code, market)
             except Exception:
@@ -222,7 +219,7 @@ def run_price_monitor() -> Dict:
         return {'skipped': '监控开关关闭'}
     if not holdings:
         return {'skipped': '无持仓'}
-    markets = {p.market or _detect_market(p.stock_code) for p in holdings}
+    markets = {p.market or detect_market(p.stock_code) for p in holdings}
     if not any(is_market_open(m) for m in markets):
         return {'skipped': '休市中'}
 

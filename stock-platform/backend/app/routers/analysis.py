@@ -12,6 +12,7 @@ from ..schemas import AnalysisRequest, AnalysisResponse
 from ..services.analysis_service import AnalysisService
 from ..services.score_tracking_service import build_tracking
 from ..services.stock_service import StockService
+from ..utils.market import detect_market
 
 router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 analysis_service = AnalysisService()
@@ -21,7 +22,7 @@ analysis_service = AnalysisService()
 def analyze_stock(request: AnalysisRequest, db: Session = Depends(get_db)):
     """综合分析股票"""
     # 确定市场类型
-    market = "A" if request.stock_code.isdigit() or "." in request.stock_code else "US"
+    market = detect_market(request.stock_code)
 
     result = analysis_service.analyze_stock(
         stock_code=request.stock_code,

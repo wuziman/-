@@ -11,6 +11,10 @@ import { colors } from '../theme/tokens';
 const { Search } = Input;
 const { Option } = Select;
 
+// 三策略点位格式化：价格两位小数、距离带正负号；后端指标不足时字段为 null，显示占位符
+const fmtPx = (v: number | null) => (v == null ? '--' : `$${v.toFixed(2)}`);
+const fmtDist = (v: number | null) => (v == null ? '--' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`);
+
 interface SearchResult {
   code: string;
   name: string;
@@ -647,7 +651,7 @@ const Analysis: React.FC = () => {
                 <Card title="💰 三策略点位">
                   <div style={{ textAlign: 'center', marginBottom: 16 }}>
                     <span style={{ fontSize: 20, fontWeight: 'bold' }}>
-                      当前价: ${analysisResult.price_levels.current_price}
+                      当前价: {fmtPx(analysisResult.price_levels.current_price)}
                     </span>
                   </div>
 
@@ -661,15 +665,15 @@ const Analysis: React.FC = () => {
                           <Descriptions column={1} size="small">
                             <Descriptions.Item label="买入价">
                               <span style={{ color: colors.success, fontWeight: 'bold' }}>
-                                ${analysisResult.price_levels.linear.buy}
+                                {fmtPx(analysisResult.price_levels.linear.buy)}
                               </span>
                               <Tag color="green" style={{ marginLeft: 8 }}>
-                                距离 {analysisResult.price_levels.linear.distance}%
+                                {fmtDist(analysisResult.price_levels.linear.distance)}
                               </Tag>
                             </Descriptions.Item>
                             <Descriptions.Item label="止盈位">
                               <span style={{ color: colors.primary }}>
-                                ${analysisResult.price_levels.linear.profit}
+                                {fmtPx(analysisResult.price_levels.linear.profit)}
                               </span>
                               <Tag color="blue" style={{ marginLeft: 8 }}>
                                 +15%
@@ -677,7 +681,7 @@ const Analysis: React.FC = () => {
                             </Descriptions.Item>
                             <Descriptions.Item label="止损位">
                               <span style={{ color: colors.error }}>
-                                ${analysisResult.price_levels.linear.stop}
+                                {fmtPx(analysisResult.price_levels.linear.stop)}
                               </span>
                               <Tag color="red" style={{ marginLeft: 8 }}>
                                 -8%
@@ -693,15 +697,15 @@ const Analysis: React.FC = () => {
                           <Descriptions column={1} size="small">
                             <Descriptions.Item label="买入价">
                               <span style={{ color: colors.success, fontWeight: 'bold' }}>
-                                ${analysisResult.price_levels.nonlinear.buy}
+                                {fmtPx(analysisResult.price_levels.nonlinear.buy)}
                               </span>
                               <Tag color="green" style={{ marginLeft: 8 }}>
-                                距离 {analysisResult.price_levels.nonlinear.distance}%
+                                {fmtDist(analysisResult.price_levels.nonlinear.distance)}
                               </Tag>
                             </Descriptions.Item>
                             <Descriptions.Item label="止盈位">
                               <span style={{ color: colors.primary }}>
-                                ${analysisResult.price_levels.nonlinear.profit}
+                                {fmtPx(analysisResult.price_levels.nonlinear.profit)}
                               </span>
                               <Tag color="blue" style={{ marginLeft: 8 }}>
                                 +46%
@@ -709,7 +713,7 @@ const Analysis: React.FC = () => {
                             </Descriptions.Item>
                             <Descriptions.Item label="止损位">
                               <span style={{ color: colors.error }}>
-                                ${analysisResult.price_levels.nonlinear.stop}
+                                {fmtPx(analysisResult.price_levels.nonlinear.stop)}
                               </span>
                               <Tag color="red" style={{ marginLeft: 8 }}>
                                 -8%

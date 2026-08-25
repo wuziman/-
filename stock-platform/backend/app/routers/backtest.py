@@ -7,6 +7,7 @@ from typing import List
 from ..schemas import (BacktestRequest, BacktestResponse, BacktestCompareRequest,
                        OptimizeRequest, WalkForwardRequest)
 from ..services.backtest_service import BacktestService
+from ..utils.market import detect_market
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 backtest_service = BacktestService()
@@ -45,7 +46,7 @@ async def get_strategies():
 def run_backtest(request: BacktestRequest):
     """运行策略回测"""
     # 确定市场类型
-    market = "A" if request.stock_code.isdigit() or "." in request.stock_code else "US"
+    market = detect_market(request.stock_code)
 
     result = backtest_service.run_backtest(
         stock_code=request.stock_code,
@@ -68,7 +69,7 @@ def run_backtest(request: BacktestRequest):
 def run_backtest_compare(request: BacktestCompareRequest):
     """一键对比4个策略 + 买入持有基准（数据只拉取一次）"""
     # 确定市场类型（纯数字或带后缀点 = A股）
-    market = "A" if request.stock_code.isdigit() or "." in request.stock_code else "US"
+    market = detect_market(request.stock_code)
 
     result = backtest_service.run_compare(
         stock_code=request.stock_code,
@@ -88,7 +89,7 @@ def run_backtest_compare(request: BacktestCompareRequest):
 def optimize_strategy(request: OptimizeRequest):
     """🎯 参数网格寻优：数据只拉一次，遍历参数网格，返回最优参数/全部结果/热力图矩阵"""
     # 确定市场类型（纯数字或带后缀点 = A股）
-    market = "A" if request.stock_code.isdigit() or "." in request.stock_code else "US"
+    market = detect_market(request.stock_code)
 
     result = backtest_service.optimize(
         stock_code=request.stock_code,
@@ -111,7 +112,7 @@ def optimize_strategy(request: OptimizeRequest):
 def walk_forward(request: WalkForwardRequest):
     """🔬 Walk-Forward验证：训练窗选参→样本外测试，拼接OOS净值曲线 vs OOS买入持有"""
     # 确定市场类型（纯数字或带后缀点 = A股）
-    market = "A" if request.stock_code.isdigit() or "." in request.stock_code else "US"
+    market = detect_market(request.stock_code)
 
     result = backtest_service.walk_forward(
         stock_code=request.stock_code,

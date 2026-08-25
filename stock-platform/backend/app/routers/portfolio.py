@@ -14,6 +14,7 @@ from ..models_platform import PortfolioSnapshot
 from ..schemas import PositionCreate, PositionSell, PositionUpdate, PositionResponse
 from ..services.alert_service import compute_drawdown_stats
 from ..services.stock_service import StockService
+from ..utils.market import detect_market
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 stock_service = StockService()
@@ -22,10 +23,6 @@ stock_service = StockService()
 MAX_SINGLE_POSITION_PCT = 40.0   # 单只股票最大仓位40%
 CASH_MIN_PCT = 15.0              # 现金保留下限15%
 CASH_MAX_PCT = 25.0              # 现金保留上限25%
-
-
-def _detect_market(stock_code: str) -> str:
-    return "A" if stock_code.isdigit() or "." in stock_code else "US"
 
 
 def _get_total_capital(db: Session) -> float:
@@ -52,7 +49,7 @@ def get_positions(db: Session = Depends(get_db)):
 
 
 def _enrich_holding(pos: Position) -> PositionResponse:
-    market = _detect_market(pos.stock_code)
+    market = detect_market(pos.stock_code)
     quote = stock_service.get_realtime_quote(pos.stock_code, market)
 
     current_price = quote['price'] if quote else pos.buy_price
@@ -235,7 +232,7 @@ def get_portfolio_summary(db: Session = Depends(get_db)):
     per_stock_value = {}
 
     for pos in positions:
-        market = _detect_market(pos.stock_code)
+        market = detect_market(pos.stock_code)
         quote = stock_service.get_realtime_quote(pos.stock_code, market)
         current_price = quote['price'] if quote else pos.buy_price
         value = current_price * pos.quantity
