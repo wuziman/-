@@ -235,9 +235,9 @@ export const OptimizePanel: React.FC<RunPanelProps> = ({ stockCode, strategies, 
   return (
     <Card title={`🎯 参数寻优${optResult ? ` · ${optResult.stock_code} · ${periodLabel(optResult.period)} · 资金$${(optResult.initial_capital ?? 0).toLocaleString()}` : ''}`} style={{ marginTop: 16 }}>
       <Space wrap style={{ marginBottom: 16 }}>
-        <Select value={optStrategy} onChange={setOptStrategy} style={{ width: 240 }}>
+        <Select value={optStrategy} onChange={setOptStrategy} style={{ width: 240 }} optionLabelProp="title">
           {strategies.map(s => (
-            <Select.Option key={s.id} value={s.id}>
+            <Select.Option key={s.id} value={s.id} title={s.name}>
               {s.name} - {s.description}
             </Select.Option>
           ))}
@@ -396,9 +396,9 @@ export const WalkForwardPanel: React.FC<RunPanelProps> = ({ stockCode, strategie
   return (
     <Card title={`🔬 Walk-Forward验证${wfResult ? ` · ${wfResult.stock_code} · ${periodLabel(wfResult.period)} · 资金$${(wfResult.initial_capital ?? 0).toLocaleString()}` : ''}`} style={{ marginTop: 16 }}>
       <Space wrap style={{ marginBottom: 16 }}>
-        <Select value={wfStrategy} onChange={setWfStrategy} style={{ width: 240 }}>
+        <Select value={wfStrategy} onChange={setWfStrategy} style={{ width: 240 }} optionLabelProp="title">
           {strategies.map(s => (
-            <Select.Option key={s.id} value={s.id}>
+            <Select.Option key={s.id} value={s.id} title={s.name}>
               {s.name} - {s.description}
             </Select.Option>
           ))}

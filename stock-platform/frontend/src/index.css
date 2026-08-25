@@ -1,7 +1,8 @@
 body {
   margin: 0;
+  /* 各平台原生字体优先，无 web 字体依赖（Roboto 已移除：检测器 overused-font 命中源） */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', 'Roboto',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC',
     'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

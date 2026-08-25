@@ -257,9 +257,10 @@ const Backtest: React.FC = () => {
                     label="选择策略"
                     rules={[{ required: true, message: '请选择策略' }]}
                   >
-                    <Select placeholder="选择回测策略">
+                    {/* 选中态只显示策略名（title），下拉项保留完整描述——长标签不再溢出选择框 */}
+                    <Select placeholder="选择回测策略" optionLabelProp="title">
                       {strategies.map(s => (
-                        <Option key={s.id} value={s.id}>
+                        <Option key={s.id} value={s.id} title={s.name}>
                           {s.name} - {s.description}
                         </Option>
                       ))}
