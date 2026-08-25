@@ -185,18 +185,18 @@ const Backtest: React.FC = () => {
   };
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    fetchStrategies();
-  }, []);
-
   const fetchStrategies = async () => {
     try {
       const response = await backtestApi.getStrategies();
       setStrategies(response.data.strategies);
-    } catch (error) {
+    } catch {
       console.error('获取策略列表失败');
     }
   };
+
+  useEffect(() => {
+    fetchStrategies();
+  }, []);
 
   const handleSearch = async (value: string) => {
     if (!value.trim()) return;
@@ -204,7 +204,7 @@ const Backtest: React.FC = () => {
     try {
       const response = await stockApi.search(value);
       setSearchResults(response.data.results);
-    } catch (error) {
+    } catch {
       message.error('搜索失败');
     }
   };
@@ -262,7 +262,7 @@ const Backtest: React.FC = () => {
       if (seq !== selectSeqRef.current) return; // 等待期间已切股，丢弃过期结果
       setCompareResult(response.data);
       message.success('对比完成');
-    } catch (error) {
+    } catch {
       message.error('策略对比失败');
     } finally {
       setCompareLoading(false);
@@ -289,7 +289,7 @@ const Backtest: React.FC = () => {
       if (seq !== selectSeqRef.current) return; // 等待期间已切股，丢弃过期结果
       setOptResult(response.data);
       message.success('寻优完成');
-    } catch (error) {
+    } catch {
       message.error('参数寻优失败');
     } finally {
       setOptLoading(false);
@@ -317,7 +317,7 @@ const Backtest: React.FC = () => {
       if (seq !== selectSeqRef.current) return; // 等待期间已切股，丢弃过期结果
       setWfResult(response.data);
       message.success('Walk-Forward验证完成');
-    } catch (error) {
+    } catch {
       message.error('Walk-Forward验证失败');
     } finally {
       setWfLoading(false);
@@ -762,7 +762,7 @@ const Backtest: React.FC = () => {
       <h2>🧪 策略回测</h2>
 
       <Row gutter={16}>
-        <Col span={16}>
+        <Col xs={24} lg={16}>
           <Card title="回测配置" style={{ marginBottom: 16 }}>
             <Form
               form={form}
@@ -822,7 +822,7 @@ const Backtest: React.FC = () => {
               )}
 
               <Row gutter={16}>
-                <Col span={8}>
+                <Col xs={24} md={8}>
                   <Form.Item name="period" label="回测周期" initialValue="1y">
                     <Select
                       onChange={(v) => form.setFieldValue('period', v)}
@@ -834,12 +834,12 @@ const Backtest: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col xs={24} md={8}>
                   <Form.Item name="date_range" label="自定义时间段（可选，优先于周期）">
                     <DatePicker.RangePicker style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col xs={24} md={8}>
                   <Form.Item
                     name="initial_capital"
                     label="初始资金"
@@ -1001,7 +1001,7 @@ const Backtest: React.FC = () => {
           </Card>
         </Col>
 
-        <Col span={8}>
+        <Col xs={24} lg={8}>
           {backtestResult ? (
             <>
               <Card title="📈 回测结果" style={{ marginBottom: 16 }}>
@@ -1043,6 +1043,21 @@ const Backtest: React.FC = () => {
                     />
                   </Col>
                 </Row>
+
+                {backtestResult.buy_hold_return != null && (() => {
+                  const excess = backtestResult.total_return - backtestResult.buy_hold_return!;
+                  return (
+                    <Statistic
+                      title="相对买入持有（超额）"
+                      value={excess}
+                      precision={2}
+                      suffix="%"
+                      prefix={excess > 0 ? '+' : ''}
+                      style={{ marginTop: 16 }}
+                      valueStyle={{ color: excess > 0 ? colors.profit : excess < 0 ? colors.loss : colors.textSecondary }}
+                    />
+                  );
+                })()}
 
                 <Row gutter={16} style={{ marginTop: 16 }}>
                   <Col span={12}>

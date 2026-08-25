@@ -4,6 +4,7 @@ import { ConfigProvider, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import MainLayout from './components/MainLayout';
 import ErrorBoundary from './components/ErrorBoundary';
+import { colors } from './theme/tokens';
 
 // 路由级代码分割：首页不再打包回测/分析页与echarts，进入对应页面时才加载
 const Home = lazy(() => import('./pages/Home'));
@@ -14,7 +15,17 @@ const AIPick = lazy(() => import('./pages/AIPick'));
 
 function App() {
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider
+      locale={zhCN}
+      theme={{
+        token: {
+          // 与 DESIGN.md/tokens.ts 对齐；colorLink 用更深的蓝保证正文链接对比度≥4.5:1
+          colorPrimary: colors.primary,
+          colorInfo: colors.primary,
+          colorLink: '#0958d9',
+        },
+      }}
+    >
       <Router>
         <MainLayout>
           <ErrorBoundary>

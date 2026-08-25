@@ -52,6 +52,8 @@ const Portfolio: React.FC = () => {
   const [summary, setSummary] = useState<PositionSummary | null>(null);
   const [capitalInput, setCapitalInput] = useState<number | null>(null);
   const [capitalSaving, setCapitalSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);   // 弹窗提交防重复点击
+  const [loadErrors, setLoadErrors] = useState<{ detail?: boolean; stats?: boolean }>({});
 
   const [sellModalVisible, setSellModalVisible] = useState(false);
   const [sellingPosition, setSellingPosition] = useState<Position | null>(null);
@@ -69,6 +71,30 @@ const Portfolio: React.FC = () => {
     peak_value: number;
   } | null>(null);
 
+  const fetchData = async () => {
+    setLoading(true);
+    // 分区加载：任一接口失败只标记对应分区，不把整个页面变成假零值
+    const [positionsRes, historyRes, summaryRes, capitalRes] = await Promise.allSettled([
+      portfolioApi.getPositions(),
+      portfolioApi.getHistory(),
+      portfolioApi.getSummary(),
+      portfolioApi.getTotalCapital()
+    ]);
+    const failed: { detail?: boolean; stats?: boolean } = {};
+    if (positionsRes.status === 'fulfilled') setPositions(positionsRes.value.data);
+    else failed.detail = true;
+    if (historyRes.status === 'fulfilled') setHistory(historyRes.value.data);
+    else failed.detail = true;
+    if (summaryRes.status === 'fulfilled') setSummary(summaryRes.value.data);
+    else failed.stats = true;
+    if (capitalRes.status === 'fulfilled') {
+      const cap = capitalRes.value.data.total_capital || 0;
+      setCapitalInput(cap || null);
+    }
+    setLoadErrors(failed);
+    setLoading(false);
+  };
+
   useEffect(() => {
     fetchData();
     // 净值曲线加载失败不影响持仓主数据
@@ -79,27 +105,6 @@ const Portfolio: React.FC = () => {
       })
       .catch(() => {});
   }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [positionsRes, historyRes, summaryRes, capitalRes] = await Promise.all([
-        portfolioApi.getPositions(),
-        portfolioApi.getHistory(),
-        portfolioApi.getSummary(),
-        portfolioApi.getTotalCapital()
-      ]);
-      setPositions(positionsRes.data);
-      setHistory(historyRes.data);
-      setSummary(summaryRes.data);
-      const cap = capitalRes.data.total_capital || 0;
-      setCapitalInput(cap || null);
-    } catch (error) {
-      message.error('获取数据失败');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ---------- 止损止盈触发检测 ----------
   const stopAlerts = positions.filter(p =>
@@ -137,7 +142,8 @@ const Portfolio: React.FC = () => {
   };
 
   const handleSellSubmit = async () => {
-    if (!sellingPosition) return;
+    if (!sellingPosition || submitting) return;
+    setSubmitting(true);
     try {
       const values = await sellForm.validateFields();
       const res = await portfolioApi.sellPosition(sellingPosition.id, {
@@ -150,6 +156,8 @@ const Portfolio: React.FC = () => {
     } catch (error: any) {
       if (error.errorFields) return;
       message.error('卖出失败');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -179,12 +187,14 @@ const Portfolio: React.FC = () => {
       await portfolioApi.deletePosition(id);
       message.success('删除成功');
       fetchData();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
       const values = await form.validateFields();
       if (editingPosition) {
@@ -210,6 +220,8 @@ const Portfolio: React.FC = () => {
     } catch (error: any) {
       if (error.errorFields) return;
       message.error('操作失败');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -364,7 +376,28 @@ const Portfolio: React.FC = () => {
         />
       )}
 
-      {/* ===== 总览统计 ===== */}
+      {/* ===== 加载失败提示（分区，不与真实零值混淆） ===== */}
+      {loadErrors.stats && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 8 }}
+          message="持仓统计加载失败——下方总览数字暂不可用，不代表真实持仓状况"
+          action={<Button size="small" danger onClick={fetchData}>重新加载</Button>}
+        />
+      )}
+      {loadErrors.detail && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 8 }}
+          message="持仓明细加载失败"
+          action={<Button size="small" danger onClick={fetchData}>重新加载</Button>}
+        />
+      )}
+
+      {/* ===== 总览统计（统计接口失败时整体隐藏，避免渲染成假零值） ===== */}
+      {!loadErrors.stats && (
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={12} md={8} lg={4}>
           <Card><Statistic title="持仓数量" value={summary?.total_positions || 0} /></Card>
@@ -377,7 +410,7 @@ const Portfolio: React.FC = () => {
             <Statistic
               title="浮动盈亏"
               value={summary?.total_profit || 0} precision={2} prefix="$"
-              valueStyle={{ color: (summary?.total_profit || 0) >= 0 ? colors.profit : colors.loss }}
+              valueStyle={{ color: (summary?.total_profit || 0) > 0 ? colors.profit : (summary?.total_profit || 0) < 0 ? colors.loss : colors.textSecondary }}
             />
           </Card>
         </Col>
@@ -386,7 +419,7 @@ const Portfolio: React.FC = () => {
             <Statistic
               title="收益率"
               value={summary?.total_profit_pct || 0} precision={2} suffix="%"
-              valueStyle={{ color: (summary?.total_profit_pct || 0) >= 0 ? colors.profit : colors.loss }}
+              valueStyle={{ color: (summary?.total_profit_pct || 0) > 0 ? colors.profit : (summary?.total_profit_pct || 0) < 0 ? colors.loss : colors.textSecondary }}
             />
           </Card>
         </Col>
@@ -405,6 +438,7 @@ const Portfolio: React.FC = () => {
           </Card>
         </Col>
       </Row>
+      )}
 
       {/* ===== 组合净值曲线（每日快照） ===== */}
       <Card
@@ -532,6 +566,7 @@ const Portfolio: React.FC = () => {
         title={`卖出 ${sellingPosition?.stock_name || ''} (${sellingPosition?.stock_code || ''})`}
         open={sellModalVisible}
         onOk={handleSellSubmit}
+        confirmLoading={submitting}
         onCancel={() => setSellModalVisible(false)}
         okText="确认卖出"
         width="92%"
@@ -565,6 +600,7 @@ const Portfolio: React.FC = () => {
         title={editingPosition ? `修改持仓 ${editingPosition.stock_name} (${editingPosition.stock_code})` : '添加持仓'}
         open={editModalVisible}
         onOk={handleSubmit}
+        confirmLoading={submitting}
         onCancel={() => setEditModalVisible(false)}
         width="92%"
         style={{ maxWidth: 600 }}

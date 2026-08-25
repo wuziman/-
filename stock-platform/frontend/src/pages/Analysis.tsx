@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Card, Input, Select, Button, Row, Col, Tag, message, Descriptions, Progress, Space, Divider, Tabs, Checkbox, Alert, Table } from 'antd';
 import { SearchOutlined, StarOutlined, StarFilled, LineChartOutlined } from '@ant-design/icons';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
@@ -85,10 +85,6 @@ const Analysis: React.FC = () => {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [newsExpanded, setNewsExpanded] = useState(false);
 
-  // 每次新分析结果出来时收起新闻列表，避免上一只股票的展开状态带过来
-  useEffect(() => {
-    setNewsExpanded(false);
-  }, [analysisResult]);
   // 切股请求序号：只有最新一次选择的结果允许写入state，防止慢的旧响应覆盖新股票数据
   const selectSeqRef = useRef(0);
   const selectedStockRef = useRef<SearchResult | null>(null); // 在途响应返回时比对当前选中股票用
@@ -100,7 +96,7 @@ const Analysis: React.FC = () => {
     try {
       const response = await stockApi.search(value, searchMarket);
       setSearchResults(response.data.results);
-    } catch (error) {
+    } catch {
       message.error('搜索失败');
     } finally {
       setLoading(false);
@@ -164,6 +160,7 @@ const Analysis: React.FC = () => {
       });
       if (seq !== selectSeqRef.current) return; // 等待期间已切股，丢弃过期分析结果
       setAnalysisResult(response.data);
+      setNewsExpanded(false); // 新结果出来时收起新闻列表，避免上一只股票的展开状态带过来
       message.success('分析完成');
       // 分析已自动落库，刷新评分追踪（失败静默忽略；在途期间已切股则丢弃）
       const seqAtRefresh = seq;
@@ -174,7 +171,7 @@ const Analysis: React.FC = () => {
           })
           .catch(() => {});
       }
-    } catch (error) {
+    } catch {
       message.error('分析失败');
     } finally {
       setLoading(false);
@@ -198,7 +195,7 @@ const Analysis: React.FC = () => {
       } else {
         message.info(`已将 ${targetCode} 加入自选股`);
       }
-    } catch (error) {
+    } catch {
       message.error('添加失败');
     }
   };
@@ -508,7 +505,7 @@ const Analysis: React.FC = () => {
 
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={16}>
-          <Col span={16}>
+          <Col xs={24} lg={16}>
             <Search
               placeholder="输入股票代码或名称搜索"
               enterButton={<><SearchOutlined /> 搜索</>}
@@ -517,7 +514,7 @@ const Analysis: React.FC = () => {
               loading={loading}
             />
           </Col>
-          <Col span={8}>
+          <Col xs={24} lg={8}>
             <Select
               placeholder="选择市场"
               style={{ width: '100%' }}
@@ -556,7 +553,7 @@ const Analysis: React.FC = () => {
 
       {selectedStock && (
         <Row gutter={16}>
-          <Col span={16}>
+          <Col xs={24} lg={16}>
             <Card
               title={
                 <span>
@@ -610,7 +607,7 @@ const Analysis: React.FC = () => {
             </Card>
           </Col>
 
-          <Col span={8}>
+          <Col xs={24} lg={8}>
             {analysisResult ? (
               <>
                 <Card title="📊 综合评分" style={{ marginBottom: 16 }}>

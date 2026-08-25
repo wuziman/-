@@ -35,6 +35,7 @@ const Home: React.FC = () => {
   const [reportLoading, setReportLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [reportMeta, setReportMeta] = useState<{ sent: boolean; message: string; char_count?: number } | null>(null);
+  const [loadErrors, setLoadErrors] = useState<{ summary?: boolean; watchlist?: boolean }>({});
 
   // ---------- 定时自动日报 ----------
   const [schedEnabled, setSchedEnabled] = useState(false);
@@ -52,29 +53,20 @@ const Home: React.FC = () => {
     days_away: number;
   }>>([]);
 
-  useEffect(() => {
-    fetchData();
-    fetchSchedule();
-    // 财报日历加载失败不影响仪表盘主数据（美股逐只查询较慢，静默降级）
-    stockApi.getEarningsCalendar()
-      .then((res) => setEarningsItems(res.data.items || []))
-      .catch(() => {});
-  }, []);
-
   const fetchData = async () => {
     setLoading(true);
-    try {
-      const [summaryRes, watchlistRes] = await Promise.all([
-        portfolioApi.getSummary(),
-        stockApi.getWatchlist()
-      ]);
-      setSummary(summaryRes.data);
-      setWatchlist(watchlistRes.data);
-    } catch (error) {
-      message.error('获取数据失败');
-    } finally {
-      setLoading(false);
-    }
+    // 分区加载：任一接口失败只标记对应分区，避免把失败渲染成全零仪表盘
+    const [summaryRes, watchlistRes] = await Promise.allSettled([
+      portfolioApi.getSummary(),
+      stockApi.getWatchlist()
+    ]);
+    const failed: { summary?: boolean; watchlist?: boolean } = {};
+    if (summaryRes.status === 'fulfilled') setSummary(summaryRes.value.data);
+    else failed.summary = true;
+    if (watchlistRes.status === 'fulfilled') setWatchlist(watchlistRes.value.data);
+    else failed.watchlist = true;
+    setLoadErrors(failed);
+    setLoading(false);
   };
 
   // ---------- 定时自动日报 ----------
@@ -84,10 +76,19 @@ const Home: React.FC = () => {
       setSchedEnabled(res.data.enabled);
       setSchedTime(dayjs().hour(res.data.hour).minute(res.data.minute).second(0));
       setLastSentDate(res.data.last_sent_date);
-    } catch (error) {
+    } catch {
       // 调度配置读取失败不影响仪表盘主数据
     }
   };
+
+  useEffect(() => {
+    fetchData();
+    fetchSchedule();
+    // 财报日历加载失败不影响仪表盘主数据（美股逐只查询较慢，静默降级）
+    stockApi.getEarningsCalendar()
+      .then((res) => setEarningsItems(res.data.items || []))
+      .catch(() => {});
+  }, []);
 
   const handleSaveSchedule = async () => {
     if (!schedTime) {
@@ -226,6 +227,16 @@ const Home: React.FC = () => {
         </Space>
       </Row>
 
+      {loadErrors.summary && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginTop: 16 }}
+          message="持仓统计加载失败——下方总览数字暂不可用，不代表真实持仓状况"
+          action={<Button size="small" danger onClick={fetchData}>重新加载</Button>}
+        />
+      )}
+      {!loadErrors.summary && (
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col xs={12} sm={12} lg={6}>
           <Card><Statistic title="持仓数量" value={summary?.total_positions || 0} prefix={<StockOutlined />} /></Card>
@@ -240,8 +251,8 @@ const Home: React.FC = () => {
               value={summary?.total_profit || 0}
               precision={2}
               prefix="$"
-              suffix={(summary?.total_profit || 0) >= 0 ? <ArrowUpOutlined style={{ color: colors.profit }} /> : <ArrowDownOutlined style={{ color: colors.loss }} />}
-              valueStyle={{ color: (summary?.total_profit || 0) >= 0 ? colors.profit : colors.loss }}
+              suffix={(summary?.total_profit || 0) > 0 ? <ArrowUpOutlined style={{ color: colors.profit }} /> : (summary?.total_profit || 0) < 0 ? <ArrowDownOutlined style={{ color: colors.loss }} /> : undefined}
+              valueStyle={{ color: (summary?.total_profit || 0) > 0 ? colors.profit : (summary?.total_profit || 0) < 0 ? colors.loss : colors.textSecondary }}
             />
           </Card>
         </Col>
@@ -252,11 +263,12 @@ const Home: React.FC = () => {
               value={summary?.total_profit_pct || 0}
               precision={2}
               suffix="%"
-              valueStyle={{ color: (summary?.total_profit_pct || 0) >= 0 ? colors.profit : colors.loss }}
+              valueStyle={{ color: (summary?.total_profit_pct || 0) > 0 ? colors.profit : (summary?.total_profit_pct || 0) < 0 ? colors.loss : colors.textSecondary }}
             />
           </Card>
         </Col>
       </Row>
+      )}
 
       {/* 风控预警摘要 */}
       {summary?.warnings && summary.warnings.length > 0 && (
@@ -280,6 +292,14 @@ const Home: React.FC = () => {
         </Col>
         <Col xs={24} sm={12}>
           <Card title="⭐ 自选股" style={{ height: 420 }}>
+            {loadErrors.watchlist ? (
+              <Alert
+                type="error"
+                showIcon
+                message="自选股列表加载失败"
+                action={<Button size="small" danger onClick={fetchData}>重新加载</Button>}
+              />
+            ) : (
             <Table
               dataSource={watchlist}
               rowKey="id"
@@ -297,6 +317,7 @@ const Home: React.FC = () => {
                 }
               ]}
             />
+            )}
           </Card>
         </Col>
       </Row>

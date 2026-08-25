@@ -48,6 +48,11 @@ interface XhsSummaryRow {
 
 const CONF_COLOR: Record<string, string> = { high: 'red', medium: 'orange', low: 'default' };
 const CONF_LABEL: Record<string, string> = { high: '高确信', medium: '中等', low: '低' };
+// antd 预设橙/绿标签的文字色对比度仅3.3~3.4:1（不达WCAG AA），覆盖为同色相深色文字（≥7:1）
+const TAG_TEXT_FIX = {
+  orange: { color: '#873800' },
+  green: { color: '#135200' },
+} as const;
 
 const AIPick: React.FC = () => {
   const [status, setStatus] = useState<StatusInfo | null>(null);
@@ -251,12 +256,12 @@ const AIPick: React.FC = () => {
           <Descriptions column={1} size="small" style={{ flex: 1, minWidth: 320 }}>
             <Descriptions.Item label="AI模型">
               {status?.ai_configured
-                ? <Tag color="green">{status.ai_model}</Tag>
+                ? <Tag color="green" style={TAG_TEXT_FIX.green}>{status.ai_model}</Tag>
                 : <Tag color="red">未配置</Tag>}
             </Descriptions.Item>
             <Descriptions.Item label="小红书">
               <Space>
-                <Tag color={status?.xhs_cookie_set ? 'green' : 'default'}>
+                <Tag color={status?.xhs_cookie_set ? 'green' : 'default'} style={status?.xhs_cookie_set ? TAG_TEXT_FIX.green : undefined}>
                   {status?.xhs_cookie_set ? 'Cookie已配' : '无Cookie'}
                 </Tag>
                 <span>{status?.bloggers?.length || 0}个博主 · 缓存{status?.cached_posts || 0}条</span>
@@ -366,7 +371,12 @@ const AIPick: React.FC = () => {
                     <Space>
                       <b>#{p.rank} {p.stock_code}</b>
                       <span>{p.stock_name}</span>
-                      <Tag color={CONF_COLOR[p.confidence]}>{CONF_LABEL[p.confidence]}</Tag>
+                      <Tag
+                        color={CONF_COLOR[p.confidence]}
+                        style={CONF_COLOR[p.confidence] === 'orange' ? TAG_TEXT_FIX.orange : undefined}
+                      >
+                        {CONF_LABEL[p.confidence]}
+                      </Tag>
                       {p.price_at_pick != null && <span style={{ color: colors.textSecondary }}>@${p.price_at_pick}</span>}
                     </Space>
                   }

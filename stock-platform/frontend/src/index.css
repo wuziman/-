@@ -11,3 +11,14 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* 抽屉导航按钮仅在移动端（<992px，对应 antd lg 断点）显示 */
+.mobile-nav-btn {
+  display: none;
+}
+
+@media (max-width: 991px) {
+  .mobile-nav-btn {
+    display: inline-flex;
+  }
+}

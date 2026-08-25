@@ -1,11 +1,12 @@
-import React from 'react';
-import { Layout, Menu } from 'antd';
+import React, { useState } from 'react';
+import { Layout, Menu, Drawer, Button } from 'antd';
 import {
   HomeOutlined,
   LineChartOutlined,
   FundOutlined,
   ExperimentOutlined,
-  RobotOutlined
+  RobotOutlined,
+  MenuOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { colors } from '../theme/tokens';
@@ -19,6 +20,7 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [navOpen, setNavOpen] = useState(false);
 
   const menuItems = [
     {
@@ -50,11 +52,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider
-        breakpoint="lg"
-        collapsedWidth="0"
-        style={{ background: '#fff' }}
-      >
+      {/* 桌面端侧边栏；<992px 自动收起。trigger={null} 移除 antd 默认的零宽触发条
+          （span[role=img]，键盘无法操作），移动端导航统一走下方抽屉 */}
+      <Sider breakpoint="lg" collapsedWidth="0" trigger={null} style={{ background: '#fff' }}>
         <div style={{
           height: 64,
           display: 'flex',
@@ -80,12 +80,36 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           display: 'flex',
           alignItems: 'center'
         }}>
+          <Button
+            className="mobile-nav-btn"
+            type="text"
+            aria-label="打开导航菜单"
+            icon={<MenuOutlined />}
+            onClick={() => setNavOpen(true)}
+          />
           <h3 style={{ margin: 0 }}>A股 & 美股量化分析系统</h3>
         </Header>
         <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', borderRadius: 8 }}>
           {children}
         </Content>
       </Layout>
+
+      {/* 移动端抽屉导航（按钮可Tab聚焦，抽屉支持Esc关闭） */}
+      <Drawer
+        title="📈 量化平台"
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
+        width={220}
+        styles={{ body: { padding: 0 } }}
+      >
+        <Menu
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          onClick={({ key }) => { navigate(key); setNavOpen(false); }}
+          style={{ borderRight: 0 }}
+        />
+      </Drawer>
     </Layout>
   );
 };
