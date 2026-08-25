@@ -214,10 +214,18 @@ const Analysis: React.FC = () => {
           .catch(() => {});
       }
     } catch {
+      if (seq !== selectSeqRef.current) return; // 已取消/已切股，丢弃过期错误提示
       message.error('分析失败');
     } finally {
       setLoading(false);
     }
+  };
+
+  // 取消等待：作废在途结果（seq失效后响应被丢弃），立即还控制权；后端计算照常结束
+  const handleCancelAnalyze = () => {
+    selectSeqRef.current += 1;
+    setLoading(false);
+    message.info('已取消等待，本次结果将丢弃');
   };
 
   const handleAddToWatchlist = async () => {
@@ -641,6 +649,15 @@ const Analysis: React.FC = () => {
               }
               style={{ marginBottom: 16 }}
             >
+              {loading && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  message="分析进行中：拉取行情、四维数据源并综合评分，通常需要 20-40 秒"
+                  action={<Button size="small" onClick={handleCancelAnalyze}>取消等待</Button>}
+                />
+              )}
               {historyData.length > 0 ? (
                 <>
                   <div style={{ marginBottom: 8 }}>

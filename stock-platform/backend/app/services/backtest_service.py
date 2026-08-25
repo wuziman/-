@@ -779,6 +779,9 @@ class BacktestService:
             'stock_code': stock_code,
             'strategy': strategy,
             'metric': metric,
+            # 回显实际使用的回测口径，前端展示用（消除"静默继承顶部表单"）
+            'period': period,
+            'initial_capital': initial_capital,
             'best': best,
             'results': results,
             'heatmap': heatmap,
@@ -960,6 +963,7 @@ class BacktestService:
             'stock_code': stock_code,
             'strategy': strategy,
             'period': period,
+            'initial_capital': initial_capital,
             'train_ratio': train_ratio,
             'total_segments': segments,
             'segments': seg_reports,

@@ -95,6 +95,8 @@ interface OptimizeResult {
   stock_code: string;
   strategy: string;
   metric: string;
+  period?: string;             // 回显实际回测口径
+  initial_capital?: number;
   best: OptimizeRow;
   results: OptimizeRow[];
   heatmap: HeatmapData;
@@ -117,6 +119,8 @@ interface WFSegment {
 interface WFResult {
   stock_code: string;
   strategy: string;
+  period?: string;             // 回显实际回测口径
+  initial_capital?: number;
   train_ratio: number;
   segments: WFSegment[];
   stitched_oos_curve: Array<{ date: string; value: number }>;
@@ -153,6 +157,8 @@ const METRIC_LABEL: Record<string, string> = {
   win_rate: '胜率%',
   trade_count: '交易次数',
 };
+
+const periodLabel = (p?: string) => (p === '3y' ? '近3年' : p === '5y' ? '近5年' : '近1年');
 
 const Backtest: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -904,7 +910,7 @@ const Backtest: React.FC = () => {
           )}
 
           {/* 🎯 参数寻优面板 */}
-          <Card title={`🎯 参数寻优${optResult ? ` · ${optResult.stock_code}` : ''}`} style={{ marginTop: 16 }}>
+          <Card title={`🎯 参数寻优${optResult ? ` · ${optResult.stock_code} · ${periodLabel(optResult.period)} · 资金$${(optResult.initial_capital ?? 0).toLocaleString()}` : ''}`} style={{ marginTop: 16 }}>
             <Space wrap style={{ marginBottom: 16 }}>
               <Select value={optStrategy} onChange={setOptStrategy} style={{ width: 240 }}>
                 {strategies.map(s => (
@@ -949,7 +955,7 @@ const Backtest: React.FC = () => {
           </Card>
 
           {/* 🔬 Walk-Forward验证面板 */}
-          <Card title={`🔬 Walk-Forward验证${wfResult ? ` · ${wfResult.stock_code}` : ''}`} style={{ marginTop: 16 }}>
+          <Card title={`🔬 Walk-Forward验证${wfResult ? ` · ${wfResult.stock_code} · ${periodLabel(wfResult.period)} · 资金$${(wfResult.initial_capital ?? 0).toLocaleString()}` : ''}`} style={{ marginTop: 16 }}>
             <Space wrap style={{ marginBottom: 16 }}>
               <Select value={wfStrategy} onChange={setWfStrategy} style={{ width: 240 }}>
                 {strategies.map(s => (

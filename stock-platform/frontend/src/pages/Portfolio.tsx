@@ -210,7 +210,7 @@ const Portfolio: React.FC = () => {
         const data = {
           ...values,
           buy_date: values.buy_date.format('YYYY-MM-DD'),
-          market: values.stock_code.match(/^\d/) ? 'A' : 'US'
+          // market 由后端 detect_market 统一判定，前端不再复刻正则
         };
         await portfolioApi.addPosition(data);
         message.success('添加成功');
@@ -461,7 +461,7 @@ const Portfolio: React.FC = () => {
           ) : null
         }
       >
-        {curve.length > 1 ? (
+        {curve.length >= 3 ? (
           <>
             {ddStats && ddStats.current_drawdown_pct >= 20 && (
               <Alert
@@ -494,6 +494,10 @@ const Portfolio: React.FC = () => {
               快照由后台监控任务在每个交易时段自动写入（同日取最新值）
             </div>
           </>
+        ) : curve.length > 0 ? (
+          <div style={{ textAlign: 'center', padding: 30, color: colors.textSecondary }}>
+            已积累 {curve.length} 天快照——满 3 天后绘制曲线（样本过少，两点连线容易夸大波动）
+          </div>
         ) : (
           <div style={{ textAlign: 'center', padding: 30, color: colors.textSecondary }}>
             暂无快照数据——后台监控任务会在交易时段自动记录每日组合市值，累积几天后这里会出现曲线
@@ -629,10 +633,36 @@ const Portfolio: React.FC = () => {
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="stop_loss" label="止损位"><InputNumber style={{ width: '100%' }} min={0} step={0.01} /></Form.Item>
+              <Form.Item
+                name="stop_loss"
+                label="止损位"
+                dependencies={['buy_price']}
+                rules={[({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const buy = getFieldValue('buy_price');
+                    if (value == null || !buy) return Promise.resolve();
+                    return value < buy ? Promise.resolve() : Promise.reject(new Error('止损位应低于买入价'));
+                  },
+                })]}
+              >
+                <InputNumber style={{ width: '100%' }} min={0} step={0.01} />
+              </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="take_profit" label="止盈位"><InputNumber style={{ width: '100%' }} min={0} step={0.01} /></Form.Item>
+              <Form.Item
+                name="take_profit"
+                label="止盈位"
+                dependencies={['buy_price']}
+                rules={[({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const buy = getFieldValue('buy_price');
+                    if (value == null || !buy) return Promise.resolve();
+                    return value > buy ? Promise.resolve() : Promise.reject(new Error('止盈位应高于买入价'));
+                  },
+                })]}
+              >
+                <InputNumber style={{ width: '100%' }} min={0} step={0.01} />
+              </Form.Item>
             </Col>
           </Row>
         </Form>

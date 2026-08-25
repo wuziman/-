@@ -150,7 +150,15 @@ async def sell_position(position_id: int, sell: PositionSell, db: Session = Depe
 @router.post("", response_model=PositionResponse)
 async def add_position(position: PositionCreate, db: Session = Depends(get_db)):
     """添加持仓"""
-    db_position = Position(**position.model_dump())
+    if position.stop_loss is not None and position.stop_loss >= position.buy_price:
+        raise HTTPException(status_code=400, detail="止损位应低于买入价")
+    if position.take_profit is not None and position.take_profit <= position.buy_price:
+        raise HTTPException(status_code=400, detail="止盈位应高于买入价")
+
+    data = position.model_dump()
+    # 市场判定后端单点：忽略客户端传值（此前前端用首字符正则复刻，BRK.B 类代码会误判）
+    data['market'] = detect_market(position.stock_code)
+    db_position = Position(**data)
     db.add(db_position)
     db.commit()
     db.refresh(db_position)

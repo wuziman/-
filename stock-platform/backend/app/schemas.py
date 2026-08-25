@@ -45,7 +45,8 @@ class AnalysisResponse(BaseModel):
 class PositionCreate(BaseModel):
     stock_code: str
     stock_name: str
-    market: str
+    # 市场判定以后端 detect_market 为准，此字段仅为兼容旧客户端保留
+    market: str = "US"
     buy_price: float
     quantity: int
     buy_date: datetime
