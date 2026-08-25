@@ -2,14 +2,16 @@
 数据库配置
 """
 
+import os
 from pathlib import Path
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# 基于本文件的绝对路径，避免从其他目录启动uvicorn时静默新建空库
-_DB_PATH = Path(__file__).resolve().parents[1] / "stock_platform.db"
+# 基于本文件的绝对路径，避免从其他目录启动uvicorn时静默新建空库。
+# 测试隔离：设置 STOCK_PLATFORM_DB 环境变量后所有连接指向指定库（tests/conftest.py 注入临时目录）
+_DB_PATH = Path(os.environ.get("STOCK_PLATFORM_DB", "") or (Path(__file__).resolve().parents[1] / "stock_platform.db"))
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{_DB_PATH}"
 
 engine = create_engine(

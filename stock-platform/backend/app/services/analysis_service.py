@@ -7,10 +7,8 @@
 """
 
 import re
-import json
 import logging
 import os
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import requests
@@ -18,6 +16,16 @@ from typing import Dict, Tuple, Any, List
 from .stock_service import StockService, _get_cn_session
 from .tech_score import calculate_tech_score
 from ..utils.indicators import calculate_all_indicators
+from ..utils.app_config import load_config
+from ..utils.price_levels import (
+    LINEAR_PROFIT_PCT,
+    NONLINEAR_PROFIT_PCT,
+    discipline_stop,
+    levels_with_targets,
+    linear_buy_point,
+    macd_state_days,
+    nonlinear_buy_point,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,22 +74,14 @@ def score_text_sentiment(text: str) -> int:
 
 
 def _load_api_keys() -> Dict[str, str]:
-    """加载API keys：环境变量优先，其次原项目config/config.json"""
+    """加载API keys：环境变量优先，其次原项目config/config.json（读取走 utils/app_config 单点）"""
     keys = {
         'newsapi': os.environ.get('NEWSAPI_KEY', ''),
         'fred': os.environ.get('FRED_API_KEY', ''),
     }
-    if not (keys['newsapi'] and keys['fred']):
-        # stock-platform/backend/app/services/analysis_service.py → parents[4] = 股票投资/
-        try:
-            config_path = Path(__file__).resolve().parents[4] / 'config' / 'config.json'
-            with open(config_path, 'r', encoding='utf-8') as f:
-                cfg = json.load(f)
-                api = cfg.get('api_keys', {})
-                keys['newsapi'] = keys['newsapi'] or api.get('newsapi', '')
-                keys['fred'] = keys['fred'] or api.get('fred', '')
-        except Exception:
-            pass
+    api = load_config().get('api_keys', {})
+    keys['newsapi'] = keys['newsapi'] or api.get('newsapi', '')
+    keys['fred'] = keys['fred'] or api.get('fred', '')
     return keys
 
 
@@ -494,43 +494,17 @@ class AnalysisService:
             if pd.isna(rsi):
                 rsi = 50
 
-            # 线性策略：斐波那契回撤位
-            if ma20 < current_price:
-                price_range = current_price - ma20
-                linear_buy = current_price - 0.5 * price_range
-            else:
-                linear_buy = current_price * 0.95
-
-            linear_buy = min(linear_buy, current_price * 0.95)
-            linear_stop = linear_buy * 0.92
-            linear_profit = linear_buy * 1.15
-
-            # 非线性策略：RSI超卖用布林下轨，否则20日均线
-            if rsi < 30:
-                nonlinear_buy = bb_lower
-            else:
-                nonlinear_buy = ma20
-
-            nonlinear_stop = nonlinear_buy * 0.92
-            nonlinear_profit = nonlinear_buy * 1.46
+            # 线性/非线性点位公式走共享模块（utils/price_levels.py，唯一定义处）
+            linear_buy = linear_buy_point(current_price, ma20)
+            nonlinear_buy = nonlinear_buy_point(rsi, ma20, bb_lower)
 
             # MACD策略：信号状态 + 操作参考（信号型策略，无固定止盈位）
             macd_info = self._calculate_macd_levels(df, latest)
 
             return {
                 'current_price': round(current_price, 2),
-                'linear': {
-                    'buy': round(linear_buy, 2),
-                    'stop': round(linear_stop, 2),
-                    'profit': round(linear_profit, 2),
-                    'distance': round((current_price - linear_buy) / current_price * 100, 2)
-                },
-                'nonlinear': {
-                    'buy': round(nonlinear_buy, 2),
-                    'stop': round(nonlinear_stop, 2),
-                    'profit': round(nonlinear_profit, 2),
-                    'distance': round((current_price - nonlinear_buy) / current_price * 100, 2)
-                },
+                'linear': levels_with_targets(current_price, linear_buy, LINEAR_PROFIT_PCT),
+                'nonlinear': levels_with_targets(current_price, nonlinear_buy, NONLINEAR_PROFIT_PCT),
                 'macd': macd_info
             }
         except Exception:
@@ -561,20 +535,11 @@ class AnalysisService:
 
             if pd.isna(macd) or pd.isna(signal):
                 return {'state': 'unknown', 'days_in_state': 0, 'hist': 0,
-                        'add_price': None, 'stop': round(current_price * 0.92, 2),
+                        'add_price': None, 'stop': discipline_stop(current_price),
                         'note': '指标数据不足'}
 
-            # 当前状态：金叉（MACD>Signal）或死叉
-            is_golden = macd > signal
-
-            # 统计当前状态已持续天数
-            above = df['MACD'] > df['MACD_Signal']
-            days = 0
-            for v in reversed(above.values.tolist()):
-                if bool(v) == is_golden:
-                    days += 1
-                else:
-                    break
+            # 当前状态：金叉（MACD>Signal）或死叉；持续天数走共享模块统计
+            is_golden, days = macd_state_days((df['MACD'] > df['MACD_Signal']).values.tolist())
 
             state = 'golden' if is_golden else 'death'
 
@@ -593,7 +558,7 @@ class AnalysisService:
                 'hist': round(float(hist), 4) if pd.notna(hist) else 0,
                 'add_price': add_price,
                 'watch_price': watch_price,
-                'stop': round(current_price * 0.92, 2),  # 纪律性止损-8%
+                'stop': discipline_stop(current_price),  # 纪律性止损-8%
                 'note': note
             }
         except Exception:

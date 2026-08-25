@@ -10,17 +10,14 @@ OpenAI兼容LLM客户端（OpenRouter/DeepSeek/Kimi/通义等通用）
 API key 只存本地该文件（已在.gitignore），不进代码、不进git。
 """
 
-import json
 import logging
-from pathlib import Path
 from typing import Dict, List
 
 import requests
 
-logger = logging.getLogger(__name__)
+from ..utils.app_config import load_config
 
-# config/config.json 位于 stock-platform 上两级（与memory记录的密钥位置一致）
-_CONFIG_PATH = Path(__file__).parents[4] / 'config' / 'config.json'
+logger = logging.getLogger(__name__)
 
 _DEFAULTS = {
     'base_url': 'https://openrouter.ai/api/v1',
@@ -32,9 +29,9 @@ _DEFAULTS = {
 
 def load_ai_provider_config() -> Dict:
     """读取AI供应商配置，缺失字段用默认值补齐（任何异常都降级为未配置状态）
-    兼容两种位置：顶层 ai_provider 或 api_keys.ai_provider"""
+    兼容两种位置：顶层 ai_provider 或 api_keys.ai_provider（读取走 utils/app_config 单点）"""
     try:
-        cfg = json.loads(_CONFIG_PATH.read_text(encoding='utf-8'))
+        cfg = load_config()
         p = cfg.get('ai_provider') or (cfg.get('api_keys') or {}).get('ai_provider') or {}
         return {
             'base_url': (p.get('base_url') or _DEFAULTS['base_url']).rstrip('/'),

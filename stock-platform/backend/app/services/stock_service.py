@@ -356,19 +356,22 @@ class StockService:
     """股票数据服务"""
 
     @staticmethod
-    def get_stock_data(stock_code: str, market: str = "US", period: str = "3mo") -> Optional[pd.DataFrame]:
+    def get_stock_data(stock_code: str, market: str = "US", period: str = "3mo",
+                       use_cache: bool = True) -> Optional[pd.DataFrame]:
         """
-        获取股票历史数据（带SQLite缓存：命中且未过期直接返回，否则拉取后写缓存）
+        获取股票历史数据（带SQLite缓存：命中且未过期直接返回，否则拉取后写缓存）。
+        use_cache=False 跳过读缓存强制刷新（拉到新数据后仍回写缓存）
         """
         key = _cache_key(market, stock_code, period)
 
         # 1. 读缓存（未命中/过期/出错返回None，自动降级直连）
-        cached = _read_kline_cache(key)
-        if cached is not None:
-            try:
-                return _df_from_records(cached)
-            except Exception as e:
-                print(f"缓存数据还原失败(降级直连): {e}")
+        if use_cache:
+            cached = _read_kline_cache(key)
+            if cached is not None:
+                try:
+                    return _df_from_records(cached)
+                except Exception as e:
+                    print(f"缓存数据还原失败(降级直连): {e}")
 
         # 2. 直连拉取
         df = _fetch_kline(stock_code, market, period)

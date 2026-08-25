@@ -249,7 +249,8 @@ class TestShouldSend:
 # ============================================
 class TestScheduledJobGuard:
     def test_skips_when_disabled(self, monkeypatch):
-        """开关关闭时scheduled_job绝不执行推送（防开发期误发的最后防线）"""
+        """开关关闭时scheduled_job绝不执行推送（防开发期误发的最后防线）。
+        恢复逻辑包在 finally 里：断言失败也不能把开关永久留在 false"""
         db = SessionLocal()
         try:
             original = scheduler_service._get_setting(
@@ -259,24 +260,25 @@ class TestScheduledJobGuard:
         finally:
             db.close()
 
-        executed = []
+        try:
+            executed = []
 
-        def fake_run_now():
-            executed.append(1)
-            return {'sent': True, 'message': '', 'report': ''}
+            def fake_run_now():
+                executed.append(1)
+                return {'sent': True, 'message': '', 'report': ''}
 
-        monkeypatch.setattr(scheduler_service, 'run_now', fake_run_now)
-        scheduler_service.scheduled_job()
-        assert executed == [], "开关关闭时不应执行推送"
-
-        # 恢复原有开关状态
-        if original:
-            db = SessionLocal()
-            try:
-                scheduler_service._set_setting(
-                    db, scheduler_service.KEY_ENABLED, original)
-            finally:
-                db.close()
+            monkeypatch.setattr(scheduler_service, 'run_now', fake_run_now)
+            scheduler_service.scheduled_job()
+            assert executed == [], "开关关闭时不应执行推送"
+        finally:
+            # 恢复原有开关状态（无论断言成败）
+            if original:
+                db = SessionLocal()
+                try:
+                    scheduler_service._set_setting(
+                        db, scheduler_service.KEY_ENABLED, original)
+                finally:
+                    db.close()
 
 
 if __name__ == '__main__':

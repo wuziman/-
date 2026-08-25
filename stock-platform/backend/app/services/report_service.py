@@ -5,9 +5,7 @@
 - 通过webhook推送（支持dry_run预览）
 """
 
-import json
 import os
-from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 import requests
@@ -17,19 +15,21 @@ from .stock_service import StockService
 from .tech_score import calculate_tech_score
 from ..utils.indicators import calculate_all_indicators
 from ..utils.market import detect_market
+from ..utils.app_config import load_config
+from ..utils.price_levels import (
+    LINEAR_PROFIT_PCT,
+    NONLINEAR_PROFIT_PCT,
+    discipline_stop,
+    levels_with_targets,
+    linear_buy_point,
+    macd_state_days,
+    nonlinear_buy_point,
+)
 
 
 def _load_webhook() -> str:
-    """企业微信webhook：环境变量优先，其次原项目config"""
-    url = os.environ.get('WECHAT_WEBHOOK', '')
-    if url:
-        return url
-    try:
-        config_path = Path(__file__).resolve().parents[4] / 'config' / 'config.json'
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f).get('wechat_webhook', '')
-    except Exception:
-        return ''
+    """企业微信webhook：环境变量优先，其次原项目config（读取走 utils/app_config 单点）"""
+    return os.environ.get('WECHAT_WEBHOOK', '') or load_config().get('wechat_webhook', '')
 
 
 class ReportService:
@@ -57,28 +57,15 @@ class ReportService:
         bb_lower = latest.get('BB_Lower', current * 0.9)
         bb_lower = float(bb_lower) if pd.notna(bb_lower) else current * 0.9
 
-        # 线性策略
-        if ma20 < current:
-            linear_buy = current - 0.5 * (current - ma20)
-        else:
-            linear_buy = current * 0.95
-        linear_buy = min(linear_buy, current * 0.95)
+        # 线性/非线性点位公式走共享模块（utils/price_levels.py，唯一定义处）
+        linear_buy = linear_buy_point(current, ma20)
+        nonlinear_buy = nonlinear_buy_point(rsi, ma20, bb_lower)
 
-        # 非线性策略
-        nonlinear_buy = bb_lower if rsi < 30 else ma20
-
-        # MACD状态与持续天数
+        # MACD状态与持续天数（共享统计）
         macd = latest.get('MACD')
         signal = latest.get('MACD_Signal')
         if pd.notna(macd) and pd.notna(signal):
-            is_golden = float(macd) > float(signal)
-            above = df['MACD'] > df['MACD_Signal']
-            days = 0
-            for v in reversed(above.values.tolist()):
-                if bool(v) == is_golden:
-                    days += 1
-                else:
-                    break
+            is_golden, days = macd_state_days((df['MACD'] > df['MACD_Signal']).values.tolist())
             macd_state = f"{'🟢金叉' if is_golden else '🔴死叉'}{days}天"
             macd_golden = is_golden
         else:
@@ -111,19 +98,9 @@ class ReportService:
             # MACD策略操作参考
             'macd_add': round(ma20, 2) if macd_golden else None,          # 金叉：回踩MA20加仓参考
             'macd_watch': round(bb_lower, 2) if macd_golden is False else None,  # 死叉：关注布林下轨
-            'macd_stop': round(current * 0.92, 2),                        # 纪律止损-8%
-            'linear': {
-                'buy': round(linear_buy, 2),
-                'profit': round(linear_buy * 1.15, 2),
-                'stop': round(linear_buy * 0.92, 2),
-                'distance': round((current - linear_buy) / current * 100, 1),
-            },
-            'nonlinear': {
-                'buy': round(nonlinear_buy, 2),
-                'profit': round(nonlinear_buy * 1.46, 2),
-                'stop': round(nonlinear_buy * 0.92, 2),
-                'distance': round((current - nonlinear_buy) / current * 100, 1),
-            },
+            'macd_stop': discipline_stop(current),                        # 纪律止损-8%
+            'linear': levels_with_targets(current, linear_buy, LINEAR_PROFIT_PCT),
+            'nonlinear': levels_with_targets(current, nonlinear_buy, NONLINEAR_PROFIT_PCT),
         }
 
     # ============================================
