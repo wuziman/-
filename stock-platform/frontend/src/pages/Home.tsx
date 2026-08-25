@@ -15,24 +15,14 @@ import dayjs from 'dayjs';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../services/echarts';
 import { portfolioApi, stockApi, reportApi, errDetail } from '../services/api';
+import type { EarningsItem, PositionSummary, WatchlistItem } from '../types/api';
 import { scheduleApi } from '../services/scheduleApi';
 import { colors } from '../theme/tokens';
-
-interface PositionSummary {
-  total_positions: number;
-  total_value: number;
-  total_cost: number;
-  total_profit: number;
-  total_profit_pct: number;
-  total_capital: number;
-  cash_pct: number | null;
-  warnings: Array<{ level: string; message: string }>;
-}
 
 const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<PositionSummary | null>(null);
-  const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportText, setReportText] = useState('');
   const [reportLoading, setReportLoading] = useState(false);
@@ -51,13 +41,7 @@ const Home: React.FC = () => {
   const [runningNow, setRunningNow] = useState(false);
 
   // ---------- 财报日历 ----------
-  const [earningsItems, setEarningsItems] = useState<Array<{
-    stock_code: string;
-    stock_name: string;
-    market: string;
-    earnings_date: string;
-    days_away: number;
-  }>>([]);
+  const [earningsItems, setEarningsItems] = useState<EarningsItem[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -198,7 +182,7 @@ const Home: React.FC = () => {
           const res = await reportApi.send(false);
           if (res.data.sent) {
             message.success('✅ 日报已推送到企业微信');
-            setReportText(res.data.report);
+            setReportText(res.data.report || '');
             setReportMeta({ sent: true, message: '已推送到企业微信', char_count: res.data.char_count });
             setReportModalVisible(true);
           } else {
@@ -345,7 +329,7 @@ const Home: React.FC = () => {
               pagination={false}
               size="small"
               scroll={{ y: 280 }}
-              onRow={(r: any) => ({
+              onRow={(r: WatchlistItem) => ({
                 onClick: () => navigate(`/analysis?code=${r.stock_code}&name=${encodeURIComponent(r.stock_name)}&market=${r.market || 'US'}`),
                 style: { cursor: 'pointer' },
               })}
@@ -360,14 +344,14 @@ const Home: React.FC = () => {
                 },
                 {
                   title: '现价', key: 'price', width: 80,
-                  render: (_: unknown, r: any) => {
+                  render: (_: unknown, r: WatchlistItem) => {
                     const p = wlQuotes[r.stock_code]?.price;
                     return p != null ? `$${Number(p).toFixed(2)}` : <span style={{ color: colors.textSecondary }}>--</span>;
                   }
                 },
                 {
                   title: '涨跌', key: 'chg', width: 80,
-                  render: (_: unknown, r: any) => {
+                  render: (_: unknown, r: WatchlistItem) => {
                     const c = wlQuotes[r.stock_code]?.change_pct;
                     if (c == null) return <span style={{ color: colors.textSecondary }}>--</span>;
                     const v = Number(c);
@@ -380,7 +364,7 @@ const Home: React.FC = () => {
                 },
                 {
                   title: '', key: 'op', width: 50,
-                  render: (_: unknown, r: any) => (
+                  render: (_: unknown, r: WatchlistItem) => (
                     <Popconfirm title="从自选股删除？" onConfirm={() => handleRemoveWatch(r.id)}>
                       <Button type="text" size="small" danger aria-label="删除自选股" icon={<DeleteOutlined />} />
                     </Popconfirm>
@@ -402,12 +386,12 @@ const Home: React.FC = () => {
                 {earningsItems.map((e) => (
                   <Tag
                     key={e.stock_code}
-                    color={e.days_away <= 7 ? 'red' : e.days_away <= 14 ? 'orange' : 'default'}
+                    color={e.days_away == null ? 'default' : e.days_away <= 7 ? 'red' : e.days_away <= 14 ? 'orange' : 'default'}
                     style={{ fontSize: 13, padding: '4px 10px' }}
                   >
                     <b>{e.stock_code} {e.stock_name}</b>
-                    {'  '}财报：{e.earnings_date}
-                    （{e.days_away === 0 ? '今天' : `${e.days_away}天后`}）
+                    {'  '}财报：{e.earnings_date || '待定'}
+                    （{e.days_away == null ? '待定' : e.days_away === 0 ? '今天' : `${e.days_away}天后`}）
                   </Tag>
                 ))}
               </Space>

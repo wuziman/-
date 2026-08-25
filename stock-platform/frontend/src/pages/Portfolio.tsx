@@ -2,48 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, InputNumber, DatePicker, Tag, Space, Statistic, Row, Col, message, Popconfirm, Alert, Tabs, Tooltip } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, ThunderboltFilled, WarningFilled, SettingOutlined } from '@ant-design/icons';
 import { portfolioApi } from '../services/api';
+import type { Position, PositionSummary } from '../types/api';
 import dayjs from 'dayjs';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../services/echarts';
 import { colors } from '../theme/tokens';
-
-interface Position {
-  id: number;
-  stock_code: string;
-  stock_name: string;
-  market: string;
-  buy_price: number;
-  quantity: number;
-  buy_date: string;
-  stop_loss: number | null;
-  take_profit: number | null;
-  status: string;
-  sell_price?: number | null;
-  sell_date?: string | null;
-  current_price?: number | null;
-  profit_loss?: number | null;
-  profit_loss_pct?: number | null;
-  realized_pnl?: number | null;
-  realized_pnl_pct?: number | null;
-  holding_days?: number | null;
-}
-
-interface PositionSummary {
-  total_positions: number;
-  total_value: number;
-  total_cost: number;
-  total_profit: number;
-  total_profit_pct: number;
-  total_capital: number;
-  cash_pct: number | null;
-  warnings: Array<{
-    level: 'error' | 'warning' | 'info';
-    code: string;
-    name: string;
-    weight: number;
-    message: string;
-  }>;
-}
 
 const Portfolio: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -153,8 +116,8 @@ const Portfolio: React.FC = () => {
       message.success(`卖出成功！已实现盈亏 ${res.data.realized_pnl >= 0 ? '+' : ''}$${res.data.realized_pnl}（${res.data.realized_pnl_pct}%），持有${res.data.holding_days}天`);
       setSellModalVisible(false);
       fetchData();
-    } catch (error: any) {
-      if (error.errorFields) return;
+    } catch (error) {
+      if ((error as { errorFields?: unknown }).errorFields) return;
       message.error('卖出失败');
     } finally {
       setSubmitting(false);
@@ -217,8 +180,8 @@ const Portfolio: React.FC = () => {
       }
       setEditModalVisible(false);
       fetchData();
-    } catch (error: any) {
-      if (error.errorFields) return;
+    } catch (error) {
+      if ((error as { errorFields?: unknown }).errorFields) return;
       message.error('操作失败');
     } finally {
       setSubmitting(false);
@@ -256,7 +219,7 @@ const Portfolio: React.FC = () => {
     },
     {
       title: '止损/止盈', key: 'levels', width: 140,
-      render: (_: any, r: Position) => (
+      render: (_: unknown, r: Position) => (
         <Space size={4}>
           <Tag color={r.current_price && r.stop_loss && r.current_price <= r.stop_loss ? 'red' : 'default'}>
             损{r.stop_loss ? `$${r.stop_loss}` : '-'}
@@ -269,7 +232,7 @@ const Portfolio: React.FC = () => {
     },
     {
       title: '操作', key: 'action', width: 170,
-      render: (_: any, r: Position) => (
+      render: (_: unknown, r: Position) => (
         <Space>
           <Tooltip title="修改买入价/数量/止损止盈">
             <Button size="small" aria-label="修改持仓" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
@@ -310,7 +273,7 @@ const Portfolio: React.FC = () => {
     },
     {
       title: '操作', key: 'action', width: 70,
-      render: (_: any, r: Position) => (
+      render: (_: unknown, r: Position) => (
         <Popconfirm title="删除该历史记录？" onConfirm={() => handleDelete(r.id)}>
           <Button type="link" size="small" danger aria-label="删除历史记录" icon={<DeleteOutlined />} />
         </Popconfirm>
@@ -518,7 +481,7 @@ const Portfolio: React.FC = () => {
                 value={capitalInput}
                 onChange={(v) => setCapitalInput(v)}
                 formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as any}
+                parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0)}
                 style={{ width: 150 }}
               />
             </Tooltip>

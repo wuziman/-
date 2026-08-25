@@ -7,44 +7,11 @@ import {
   FileTextOutlined, ReloadOutlined, SettingOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
 import { aiPickApi, errDetail } from '../services/api';
+import type { PickRecord, StatusInfo, XhsSummaryRow } from '../types/api';
 import { colors } from '../theme/tokens';
 
 const { TextArea } = Input;
 const { Paragraph } = Typography;
-
-interface PickRecord {
-  id: number;
-  run_date: string;
-  created_at: string | null;
-  rank: number;
-  stock_code: string;
-  stock_name: string;
-  confidence: string;
-  thesis: string;
-  bottlenecks: string;
-  risks: string;
-  catalysts: string;
-  market_commentary: string;
-  price_at_pick: number | null;
-}
-
-interface StatusInfo {
-  ai_configured: boolean;
-  ai_model: string;
-  xhs_cookie_set: boolean;
-  bloggers: Array<{ name: string; url: string }>;
-  cached_posts: number;
-  last_run_date: string | null;
-}
-
-interface XhsSummaryRow {
-  blogger_name: string;
-  summary_text: string;
-  posts_count: number | null;
-  period_start: string | null;
-  period_end: string | null;
-  created_at: string | null;
-}
 
 const CONF_COLOR: Record<string, string> = { high: 'red', medium: 'orange', low: 'default' };
 const CONF_LABEL: Record<string, string> = { high: '高确信', medium: '中等', low: '低' };
@@ -161,7 +128,7 @@ const AIPick: React.FC = () => {
       const res = await aiPickApi.getXhsConfig();
       setCookieInput(''); // 出于安全不回显已存Cookie，留空=保持不变
       setBloggersInput((res.data.bloggers || [])
-        .map((b: any) => `${b.name}|${b.url}`).join('\n'));
+        .map((b) => `${b.name}|${b.url}`).join('\n'));
       setXhsModalVisible(true);
     } catch {
       message.error('配置读取失败');
@@ -203,7 +170,7 @@ const AIPick: React.FC = () => {
     setRefreshingXhs(true);
     try {
       const res = await aiPickApi.refreshXhs();
-      const total = (res.data.bloggers || []).reduce((s: number, b: any) => s + (b.count || 0), 0);
+      const total = (res.data.bloggers || []).reduce((s, b) => s + (b.count || 0), 0);
       message.success(`抓取完成：${total}条笔记，新增${res.data.new_posts}条入库`);
       fetchStatus();
       generateSummaries(true);   // 抓取成功后自动生成博主总结（未配AI时静默跳过）

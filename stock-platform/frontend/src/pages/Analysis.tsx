@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import type { AnalysisResult, HistoryItem, KlineBar, SearchResult } from '../types/api';
+import { fmtDist, fmtPx } from '../utils/format';
 import { Card, Input, Select, Button, Row, Col, Tag, message, Descriptions, Progress, Space, Divider, Tabs, Checkbox, Alert, Table } from 'antd';
 import { SearchOutlined, StarOutlined, StarFilled, LineChartOutlined } from '@ant-design/icons';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
@@ -12,70 +14,12 @@ import { colors } from '../theme/tokens';
 const { Search } = Input;
 const { Option } = Select;
 
-// 三策略点位格式化：价格两位小数、距离带正负号；后端指标不足时字段为 null，显示占位符
-const fmtPx = (v: number | null) => (v == null ? '--' : `$${v.toFixed(2)}`);
-const fmtDist = (v: number | null) => (v == null ? '--' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`);
-
-interface SearchResult {
-  code: string;
-  name: string;
-  market: string;
-}
-
-interface AnalysisResult {
-  stock_code: string;
-  stock_name: string;
-  market: string;
-  scores: {
-    technical: number;
-    news: number;
-    macro: number;
-    event: number;
-    total: number;
-  };
-  recommendation: {
-    level: string;
-    action: string;
-    confidence: string;
-  };
-  price_levels: {
-    current_price: number;
-    linear: {
-      buy: number;
-      stop: number;
-      profit: number;
-      distance: number;
-    };
-    nonlinear: {
-      buy: number;
-      stop: number;
-      profit: number;
-      distance: number;
-    };
-    macd?: {
-      state: 'golden' | 'death' | 'unknown';
-      days_in_state: number;
-      hist: number;
-      add_price: number | null;
-      watch_price: number | null;
-      stop: number;
-      note: string;
-    };
-  };
-  details: {
-    technical: any;
-    news: any;
-    macro: any;
-    event: any;
-  };
-}
-
 const Analysis: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedStock, setSelectedStock] = useState<SearchResult | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyData, setHistoryData] = useState<KlineBar[]>([]);
   const [signals, setSignals] = useState<SignalsResult | null>(null);
   const [tracking, setTracking] = useState<TrackingResult | null>(null);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
@@ -86,7 +30,7 @@ const Analysis: React.FC = () => {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [newsExpanded, setNewsExpanded] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [recentAnalyses, setRecentAnalyses] = useState<any[]>([]);
+  const [recentAnalyses, setRecentAnalyses] = useState<HistoryItem[]>([]);
 
   // 切股请求序号：只有最新一次选择的结果允许写入state，防止慢的旧响应覆盖新股票数据
   const selectSeqRef = useRef(0);
@@ -253,9 +197,9 @@ const Analysis: React.FC = () => {
   const getCandlestickOption = () => {
     if (historyData.length === 0) return {};
 
-    const dates = historyData.map((d: any) => d.date);
-    const ohlc = historyData.map((d: any) => [d.open, d.close, d.low, d.high]);
-    const volumes = historyData.map((d: any) => d.volume);
+    const dates = historyData.map((d: KlineBar) => d.date);
+    const ohlc = historyData.map((d: KlineBar) => [d.open, d.close, d.low, d.high]);
+    const volumes = historyData.map((d: KlineBar) => d.volume);
 
     // 支撑/阻力位 markLine数据（绿=支撑，红=阻力）
     const srMarkData: any[] = [];
@@ -280,20 +224,22 @@ const Analysis: React.FC = () => {
     const patternPoints: any[] = [];
     if (signals?.patterns?.length) {
       const dateIndex = new Map(dates.map((d: string, idx: number) => [d, idx]));
-      const highs = historyData.map((d: any) => d.high);
-      const lows = historyData.map((d: any) => d.low);
+      const highs = historyData.map((d: KlineBar) => d.high).filter((v): v is number => v != null);
+      const lows = historyData.map((d: KlineBar) => d.low).filter((v): v is number => v != null);
       const priceRange = Math.max(...highs) - Math.min(...lows);
       const offset = priceRange > 0 ? priceRange * 0.03 : (historyData[0]?.close ?? 1) * 0.01;
       signals.patterns.forEach((p) => {
         const idx = dateIndex.get(p.date);
         if (idx === undefined) return;
         const d = historyData[idx];
+        const low = d.low ?? d.close ?? 0;
+        const high = d.high ?? d.close ?? 0;
         if (p.direction === 'bullish') {
-          patternPoints.push({ value: [p.date, d.low - offset, p.pattern], symbolRotate: 0, itemStyle: { color: colors.klineDown } });
+          patternPoints.push({ value: [p.date, low - offset, p.pattern], symbolRotate: 0, itemStyle: { color: colors.klineDown } });
         } else if (p.direction === 'bearish') {
-          patternPoints.push({ value: [p.date, d.high + offset, p.pattern], symbolRotate: 180, itemStyle: { color: colors.klineUp } });
+          patternPoints.push({ value: [p.date, high + offset, p.pattern], symbolRotate: 180, itemStyle: { color: colors.klineUp } });
         } else {
-          patternPoints.push({ value: [p.date, d.high + offset, p.pattern], itemStyle: { color: '#999' } });
+          patternPoints.push({ value: [p.date, high + offset, p.pattern], itemStyle: { color: '#999' } });
         }
       });
     }
@@ -314,17 +260,17 @@ const Analysis: React.FC = () => {
     if (showMA) {
       series.push(
         // 系列级 color 必须与 lineStyle.color 一致，否则图例回落默认调色板（图例色≠线色）
-        { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.ma5, data: historyData.map((d: any) => d.ma5), symbol: 'none', lineStyle: { width: 1, color: colors.ma5 } },
-        { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.primary, data: historyData.map((d: any) => d.ma20), symbol: 'none', lineStyle: { width: 1.5, color: colors.primary } },
-        { name: 'MA50', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.chartPurple, data: historyData.map((d: any) => d.ma50), symbol: 'none', lineStyle: { width: 1.5, color: colors.chartPurple } },
+        { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.ma5, data: historyData.map((d: KlineBar) => d.ma5), symbol: 'none', lineStyle: { width: 1, color: colors.ma5 } },
+        { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.primary, data: historyData.map((d: KlineBar) => d.ma20), symbol: 'none', lineStyle: { width: 1.5, color: colors.primary } },
+        { name: 'MA50', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: colors.chartPurple, data: historyData.map((d: KlineBar) => d.ma50), symbol: 'none', lineStyle: { width: 1.5, color: colors.chartPurple } },
       );
     }
 
     if (showBOLL) {
       series.push(
-        { name: 'BOLL上轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#999', data: historyData.map((d: any) => d.bb_upper), symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#999' } },
-        { name: 'BOLL中轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#bbb', data: historyData.map((d: any) => d.bb_mid), symbol: 'none', lineStyle: { width: 1, type: 'dotted', color: '#bbb' } },
-        { name: 'BOLL下轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#999', data: historyData.map((d: any) => d.bb_lower), symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#999' } },
+        { name: 'BOLL上轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#999', data: historyData.map((d: KlineBar) => d.bb_upper), symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#999' } },
+        { name: 'BOLL中轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#bbb', data: historyData.map((d: KlineBar) => d.bb_mid), symbol: 'none', lineStyle: { width: 1, type: 'dotted', color: '#bbb' } },
+        { name: 'BOLL下轨', type: 'line', xAxisIndex: 0, yAxisIndex: 0, color: '#999', data: historyData.map((d: KlineBar) => d.bb_lower), symbol: 'none', lineStyle: { width: 1, type: 'dashed', color: '#999' } },
       );
     }
 
@@ -911,7 +857,7 @@ const Analysis: React.FC = () => {
                   </Card>
                 )}
 
-                {(analysisResult.details?.macro?.interpretations?.length > 0 || analysisResult.details?.event?.events?.length > 0) && (
+                {((analysisResult.details?.macro?.interpretations?.length ?? 0) > 0 || (analysisResult.details?.event?.events?.length ?? 0) > 0) && (
                   <Card title="🌍 宏观 & 事件">
                     {analysisResult.details.macro?.indicators && Object.keys(analysisResult.details.macro.indicators).length > 0 && (
                       <div style={{ marginBottom: 8 }}>
@@ -920,8 +866,8 @@ const Analysis: React.FC = () => {
                           cpi_yoy: 'CPI同比',
                           unemployment: '失业率'
                         }).map(([key, label]) => {
-                          const val = analysisResult.details.macro.indicators[key];
-                          return val !== undefined ? (
+                          const val = analysisResult.details.macro.indicators?.[key];
+                          return val != null ? (
                             <Tag key={key} style={{ marginBottom: 4 }}>{label}: {val}%</Tag>
                           ) : null;
                         })}
