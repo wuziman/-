@@ -22,18 +22,29 @@ export const stockApi = {
   getWatchlist: () =>
     api.get('/stocks/watchlist'),
 
+  // 自选股实时行情（并行端点，供首页驾驶舱表格渐进填充）
+  getWatchlistQuotes: () =>
+    api.get('/stocks/watchlist/quotes'),
+
   // 自选股财报日历（美股yfinance；A股拿不到则日期为空）
   getEarningsCalendar: () =>
     api.get('/stocks/earnings-calendar'),
 
   addToWatchlist: (data: { stock_code: string; stock_name: string; market: string }) =>
     api.post('/stocks/watchlist', data),
+
+  removeFromWatchlist: (id: number) =>
+    api.delete(`/stocks/watchlist/${id}`),
 };
 
 // 分析相关API
 export const analysisApi = {
   analyze: (data: { stock_code: string; stock_name: string; mode?: string }) =>
     api.post('/analysis', data),
+
+  // 分析历史（market 由后端 detect_market 统一判定）
+  getHistory: (stockCode?: string, limit: number = 20) =>
+    api.get('/analysis/history', { params: { stock_code: stockCode, limit } }),
 };
 
 // 回测相关API

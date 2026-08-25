@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, Input, Select, Button, Row, Col, Tag, message, Descriptions, Progress, Space, Divider, Tabs, Checkbox, Alert, Table } from 'antd';
 import { SearchOutlined, StarOutlined, StarFilled, LineChartOutlined } from '@ant-design/icons';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
@@ -84,6 +85,8 @@ const Analysis: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [newsExpanded, setNewsExpanded] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [recentAnalyses, setRecentAnalyses] = useState<any[]>([]);
 
   // 切股请求序号：只有最新一次选择的结果允许写入state，防止慢的旧响应覆盖新股票数据
   const selectSeqRef = useRef(0);
@@ -141,7 +144,46 @@ const Analysis: React.FC = () => {
     setSignals(null);
     setTracking(null);
     setIsInWatchlist(false); // 切换股票时重置，避免残留上一只的"已关注"
+    // 选中状态写入URL：刷新/分享不丢（replace避免历史堆积）
+    setSearchParams({ code: stock.code, name: stock.name, market: stock.market }, { replace: true });
     fetchChartData(stock);
+  };
+
+  // 从URL恢复选中（首页自选股行点击跳转入口）；拉取最近分析快捷列表（失败静默）
+  useEffect(() => {
+    const code = searchParams.get('code');
+    if (code) {
+      handleSelectStock({
+        code,
+        name: searchParams.get('name') || code,
+        market: searchParams.get('market') || 'US',
+      });
+    }
+    analysisApi.getHistory(undefined, 8)
+      .then((res) => setRecentAnalyses(res.data || []))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const renderRecentAnalyses = () => {
+    if (recentAnalyses.length === 0) {
+      return <div style={{ textAlign: 'center', padding: 16, color: colors.textSecondary }}>暂无分析记录</div>;
+    }
+    return recentAnalyses.map((a) => (
+      <div
+        key={a.id}
+        onClick={() => handleSelectStock({ code: a.stock_code, name: a.stock_name, market: a.market || 'US' })}
+        style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '8px 4px', borderBottom: `1px solid ${colors.border}`, cursor: 'pointer'
+        }}
+      >
+        <span><b>{a.stock_code}</b> {a.stock_name}</span>
+        <span style={{ fontSize: 12, color: colors.textSecondary }}>
+          {a.total_score != null ? `综合 ${a.total_score} · ` : ''}{(a.created_at || '').slice(0, 10)}
+        </span>
+      </div>
+    ));
   };
 
   const handleAnalyze = async () => {
@@ -552,6 +594,20 @@ const Analysis: React.FC = () => {
         )}
       </Card>
 
+      {/* 未选股时：最近分析作为驾驶舱入口全宽展示（此前整个内容区被 selectedStock 门控，空页只有搜索框） */}
+      {!selectedStock && (
+        <Row gutter={16}>
+          <Col xs={24}>
+            <Card title="最近分析">
+              <div style={{ marginBottom: 8, color: colors.textSecondary, fontSize: 13 }}>
+                搜索上方股票开始分析，或点击历史记录快速进入
+              </div>
+              {renderRecentAnalyses()}
+            </Card>
+          </Col>
+        </Row>
+      )}
+
       {selectedStock && (
         <Row gutter={16}>
           <Col xs={24} lg={16}>
@@ -869,10 +925,8 @@ const Analysis: React.FC = () => {
                 )}
               </>
             ) : (
-              <Card>
-                <div style={{ textAlign: 'center', padding: 50, color: colors.textSecondary }}>
-                  选择股票后点击"开始分析"
-                </div>
+              <Card title="最近分析">
+                {renderRecentAnalyses()}
               </Card>
             )}
 

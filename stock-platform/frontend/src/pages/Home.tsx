@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Spin, message, Button, Modal, Alert, Space, Switch, TimePicker } from 'antd';
+import { Card, Row, Col, Statistic, Table, Tag, Spin, message, Button, Modal, Alert, Space, Switch, TimePicker, Popconfirm } from 'antd';
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
@@ -7,8 +7,10 @@ import {
   FileTextOutlined,
   SendOutlined,
   SaveOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../services/echarts';
@@ -37,6 +39,9 @@ const Home: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [reportMeta, setReportMeta] = useState<{ sent: boolean; message: string; char_count?: number } | null>(null);
   const [loadErrors, setLoadErrors] = useState<{ summary?: boolean; watchlist?: boolean }>({});
+  // 自选股行情（渐进填充，失败显示'--'）
+  const [wlQuotes, setWlQuotes] = useState<Record<string, { price: number | null; change_pct: number | null }>>({});
+  const navigate = useNavigate();
 
   // ---------- 定时自动日报 ----------
   const [schedEnabled, setSchedEnabled] = useState(false);
@@ -82,14 +87,36 @@ const Home: React.FC = () => {
     }
   };
 
+  const fetchQuotes = () => {
+    stockApi.getWatchlistQuotes()
+      .then((res) => {
+        const map: Record<string, { price: number | null; change_pct: number | null }> = {};
+        for (const q of res.data) map[q.stock_code] = q;
+        setWlQuotes(map);
+      })
+      .catch(() => {}); // 行情失败表格显示'--'，不影响列表
+  };
+
   useEffect(() => {
     fetchData();
     fetchSchedule();
+    fetchQuotes();
     // 财报日历加载失败不影响仪表盘主数据（美股逐只查询较慢，静默降级）
     stockApi.getEarningsCalendar()
       .then((res) => setEarningsItems(res.data.items || []))
       .catch(() => {});
   }, []);
+
+  const handleRemoveWatch = async (id: number) => {
+    try {
+      await stockApi.removeFromWatchlist(id);
+      message.success('已从自选股删除');
+      fetchData();
+      fetchQuotes();
+    } catch (error) {
+      message.error(errDetail(error, '删除失败'));
+    }
+  };
 
   const handleSaveSchedule = async () => {
     if (!schedTime) {
@@ -299,7 +326,11 @@ const Home: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12}>
-          <Card title="⭐ 自选股" style={{ height: 420 }}>
+          <Card
+            title="⭐ 自选股"
+            style={{ height: 420 }}
+            extra={<span style={{ fontSize: 12, color: colors.textSecondary }}>点击行进入分析</span>}
+          >
             {loadErrors.watchlist ? (
               <Alert
                 type="error"
@@ -314,6 +345,10 @@ const Home: React.FC = () => {
               pagination={false}
               size="small"
               scroll={{ y: 280 }}
+              onRow={(r: any) => ({
+                onClick: () => navigate(`/analysis?code=${r.stock_code}&name=${encodeURIComponent(r.stock_name)}&market=${r.market || 'US'}`),
+                style: { cursor: 'pointer' },
+              })}
               columns={[
                 { title: '代码', dataIndex: 'stock_code', key: 'stock_code' },
                 { title: '名称', dataIndex: 'stock_name', key: 'stock_name' },
@@ -321,6 +356,34 @@ const Home: React.FC = () => {
                   title: '市场', dataIndex: 'market', key: 'market',
                   render: (market: string) => (
                     <Tag color={market === 'A' ? 'red' : 'blue'}>{market === 'A' ? 'A股' : '美股'}</Tag>
+                  )
+                },
+                {
+                  title: '现价', key: 'price', width: 80,
+                  render: (_: unknown, r: any) => {
+                    const p = wlQuotes[r.stock_code]?.price;
+                    return p != null ? `$${Number(p).toFixed(2)}` : <span style={{ color: colors.textSecondary }}>--</span>;
+                  }
+                },
+                {
+                  title: '涨跌', key: 'chg', width: 80,
+                  render: (_: unknown, r: any) => {
+                    const c = wlQuotes[r.stock_code]?.change_pct;
+                    if (c == null) return <span style={{ color: colors.textSecondary }}>--</span>;
+                    const v = Number(c);
+                    return (
+                      <span style={{ color: v > 0 ? colors.profit : v < 0 ? colors.loss : colors.textSecondary }}>
+                        {v > 0 ? '+' : ''}{v.toFixed(2)}%
+                      </span>
+                    );
+                  }
+                },
+                {
+                  title: '', key: 'op', width: 50,
+                  render: (_: unknown, r: any) => (
+                    <Popconfirm title="从自选股删除？" onConfirm={() => handleRemoveWatch(r.id)}>
+                      <Button type="text" size="small" danger aria-label="删除自选股" icon={<DeleteOutlined />} />
+                    </Popconfirm>
                   )
                 }
               ]}

@@ -2,6 +2,7 @@
 股票相关API
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
 import pandas as pd
@@ -162,6 +163,26 @@ def get_earnings_calendar(db: Session = Depends(get_db)):
 async def get_watchlist(db: Session = Depends(get_db)):
     """获取自选股列表"""
     return db.query(Watchlist).order_by(Watchlist.created_at.desc()).all()
+
+
+@router.get("/watchlist/quotes")
+def get_watchlist_quotes(db: Session = Depends(get_db)):
+    """自选股实时行情（并行拉取），供首页驾驶舱表格填充现价/涨跌。
+    独立端点：列表本身保持秒开，行情由前端渐进填充"""
+    watchlist = db.query(Watchlist).order_by(Watchlist.created_at.desc()).all()
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        quotes = list(executor.map(
+            lambda w: stock_service.get_realtime_quote(w.stock_code, w.market or 'US'),
+            watchlist
+        ))
+    return [
+        {
+            'stock_code': w.stock_code,
+            'price': (q or {}).get('price'),
+            'change_pct': (q or {}).get('change_pct'),
+        }
+        for w, q in zip(watchlist, quotes)
+    ]
 
 
 @router.post("/watchlist", response_model=WatchlistResponse)

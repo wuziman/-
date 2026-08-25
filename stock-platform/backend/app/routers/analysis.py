@@ -54,6 +54,26 @@ def analyze_stock(request: AnalysisRequest, db: Session = Depends(get_db)):
         db.rollback()
         print(f"评分追踪落库失败: {e}")
 
+    # 分析历史自动落库（与 /save 同构）。此前只有手动 save 接口写这张表，
+    # 前端"已自动落库"的注释与事实不符，分析历史/最近分析列表因此恒为空
+    try:
+        db.add(AnalysisHistory(
+            stock_code=result.get('stock_code', request.stock_code),
+            stock_name=result.get('stock_name'),
+            tech_score=scores.get('technical'),
+            news_score=scores.get('news'),
+            macro_score=scores.get('macro'),
+            event_score=scores.get('event'),
+            total_score=scores.get('total'),
+            recommendation=(result.get('recommendation') or {}).get('level'),
+            price_levels=result.get('price_levels'),
+            details=result.get('details'),
+        ))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"分析历史落库失败: {e}")
+
     return result
 
 
@@ -96,6 +116,7 @@ async def get_analysis_history(
         "id": h.id,
         "stock_code": h.stock_code,
         "stock_name": h.stock_name,
+        "market": detect_market(h.stock_code),
         "total_score": h.total_score,
         "recommendation": h.recommendation,
         "created_at": h.created_at
