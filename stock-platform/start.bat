@@ -1,31 +1,27 @@
 @echo off
-echo ================================
-echo  量化交易平台启动脚本
-echo ================================
+REM ============================================================
+REM  Quant platform launcher
+REM  Keep this file ASCII-only: cmd parses .bat files in the
+REM  ANSI codepage, so UTF-8 Chinese text breaks line parsing.
+REM ============================================================
+cd /d "%~dp0"
 
-REM 启动后端
-echo.
-echo [1/2] 启动后端服务...
-cd backend
-start "Backend" cmd /k "pip install -r requirements.txt && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
+echo [1/2] Starting backend (port 8000)...
+start "Backend" cmd /k "cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 
-REM 等待后端启动
-echo 等待后端启动...
+REM wait for backend to come up
 timeout /t 5 /nobreak > nul
 
-REM 启动前端
-echo.
-echo [2/2] 启动前端服务...
-cd ../frontend
-start "Frontend" cmd /k "npm install && npm run dev"
+echo [2/2] Starting frontend (port 3000)...
+start "Frontend" cmd /k "cd frontend && npm install && npm run dev"
 
 echo.
-echo ================================
-echo  服务启动完成！
-echo ================================
+echo ==================================================
+echo  Two service windows opened - keep them running.
+echo  Close those windows to stop the services.
 echo.
-echo 后端API文档: http://localhost:8000/docs
-echo 前端界面:    http://localhost:3000
+echo  Backend API docs: http://localhost:8000/docs
+echo  Frontend UI:       http://localhost:3000
+echo ==================================================
 echo.
-echo 按任意键退出...
-pause > nul
+pause
