@@ -22,6 +22,7 @@ import type {
   PickRecord,
   StatusInfo,
   XhsSummaryRow,
+  WeeklyAlphaResponse,
 } from '../types/api';
 
 const api = axios.create({
@@ -195,6 +196,13 @@ export const aiPickApi = {
 
   generateXhsSummaries: () =>
     api.post<{ summaries?: XhsSummaryRow[]; errors?: unknown[] }>('/ai-pick/xhs-summaries', null, { timeout: 300000 }),
+
+  // 周度美股硬科技选股 · Alpha TOP 5 猛禽池
+  getWeeklyAlphaTop5: () =>
+    api.get<WeeklyAlphaResponse>('/ai-pick/top5'),
+
+  triggerWeeklyAlphaScan: () =>
+    api.post<WeeklyAlphaResponse>('/ai-pick/top5/scan', null, { timeout: 180000 }),
 };
 
 export default api;

@@ -134,3 +134,41 @@ def refresh_xhs_summaries():
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"博主总结生成失败: {e}")
+
+
+# ----------------------------------------------------
+# 周度美股硬科技选股 · Alpha TOP 5 猛禽池 API
+# ----------------------------------------------------
+@router.get("/top5")
+def get_weekly_top5():
+    """获取最新周度 Alpha TOP 5 猛禽池数据"""
+    import json
+    from pathlib import Path
+    data_file = Path(__file__).resolve().parent.parent.parent.parent / "data" / "weekly_alpha_top5.json"
+    if data_file.exists():
+        try:
+            with open(data_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"读取选股数据失败: {e}")
+    return {
+        'scan_date': None,
+        'total_scanned': 0,
+        'top5': [],
+        'ai_thesis': '暂无周度选股数据，请点击上方按钮运行扫描'
+    }
+
+
+@router.post("/top5/scan")
+def trigger_weekly_scan():
+    """手动触发一次硬科技全池选股扫描"""
+    import sys
+    from pathlib import Path
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    if str(root_dir) not in sys.path:
+        sys.path.insert(0, str(root_dir))
+    try:
+        from tech_stock_screener import run_screener
+        return run_screener()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"选股扫描失败: {e}")

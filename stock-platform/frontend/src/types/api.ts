@@ -387,3 +387,34 @@ export interface XhsSummaryRow {
   period_end: string | null;
   created_at: string | null;
 }
+
+export interface WeeklyAlphaItem {
+  code: string;
+  name: string;
+  sector: string;
+  current_price: number;
+  rsi: number;
+  m20_return: number;
+  win_rate: number;
+  momentum_score: number;
+  sweetspot_score: number;
+  backtest_score: number;
+  total_score: number;
+  earnings: {
+    date: string | null;
+    days: number | null;
+    tag: string;
+    is_imminent: boolean;
+  };
+  linear_buy: number;
+  nonlinear_buy: number;
+  linear_profit: number;
+  linear_stop: number;
+}
+
+export interface WeeklyAlphaResponse {
+  scan_date: string | null;
+  total_scanned: number;
+  top5: WeeklyAlphaItem[];
+  ai_thesis: string;
+}

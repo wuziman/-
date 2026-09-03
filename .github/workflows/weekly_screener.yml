@@ -1,0 +1,31 @@
+name: Weekly Hard Tech Stock Screener
+
+on:
+  schedule:
+    # 每周六北京时间上午9:30 = UTC时间周六凌晨01:30 (美股周线收盘后)
+    - cron: '30 1 * * 6'
+  workflow_dispatch:  # 允许在 GitHub Actions 页面随时手动触发
+
+jobs:
+  screener:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy requests openpyxl yfinance
+
+      - name: Run Weekly Hard Tech Screener
+        run: python tech_stock_screener.py
+        env:
+          WECHAT_WEBHOOK: ${{ secrets.WECHAT_WEBHOOK }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

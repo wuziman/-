@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Button, Tag, Space, Alert, Modal, Input, message,
-  Descriptions, Spin, Typography, Tooltip
+  Descriptions, Spin, Typography, Tooltip, Row, Col
 } from 'antd';
 import {
-  FileTextOutlined, ReloadOutlined, SettingOutlined, ThunderboltOutlined
+  FileTextOutlined, ReloadOutlined, SettingOutlined, ThunderboltOutlined,
+  RocketOutlined, StarOutlined
 } from '@ant-design/icons';
-import { aiPickApi, errDetail } from '../services/api';
-import type { PickRecord, StatusInfo, XhsSummaryRow } from '../types/api';
+import { aiPickApi, stockApi, errDetail } from '../services/api';
+import type { PickRecord, StatusInfo, XhsSummaryRow, WeeklyAlphaResponse } from '../types/api';
 import { colors } from '../theme/tokens';
 
 const { TextArea } = Input;
@@ -22,6 +23,11 @@ const TAG_TEXT_FIX = {
 } as const;
 
 const AIPick: React.FC = () => {
+  // 周度美股硬科技选股 · Alpha TOP 5 猛禽池
+  const [weeklyAlpha, setWeeklyAlpha] = useState<WeeklyAlphaResponse | null>(null);
+  const [loadingWeekly, setLoadingWeekly] = useState(true);
+  const [scanningWeekly, setScanningWeekly] = useState(false);
+
   const [status, setStatus] = useState<StatusInfo | null>(null);
   const [history, setHistory] = useState<PickRecord[]>([]);
   const [running, setRunning] = useState(false);
@@ -38,6 +44,41 @@ const AIPick: React.FC = () => {
   const [summaries, setSummaries] = useState<XhsSummaryRow[]>([]);
   const [loadingSummaries, setLoadingSummaries] = useState(true);
   const [generatingSummaries, setGeneratingSummaries] = useState(false);
+
+  const fetchWeeklyAlpha = async () => {
+    setLoadingWeekly(true);
+    try {
+      const res = await aiPickApi.getWeeklyAlphaTop5();
+      setWeeklyAlpha(res.data);
+    } catch {
+      // 容错静默
+    } finally {
+      setLoadingWeekly(false);
+    }
+  };
+
+  const handleScanWeekly = async () => {
+    setScanningWeekly(true);
+    message.loading({ content: '正在扫描全美35-40支顶级硬科技与算力龙头，约需10-15秒...', key: 'weekly-scan', duration: 0 });
+    try {
+      const res = await aiPickApi.triggerWeeklyAlphaScan();
+      setWeeklyAlpha(res.data);
+      message.success({ content: '周度 Alpha TOP 5 猛禽池选股已完成！', key: 'weekly-scan' });
+    } catch (err) {
+      message.error({ content: errDetail(err, '选股扫描失败'), key: 'weekly-scan' });
+    } finally {
+      setScanningWeekly(false);
+    }
+  };
+
+  const handleAddWatch = async (code: string, name: string) => {
+    try {
+      await stockApi.addToWatchlist({ stock_code: code, stock_name: name, market: 'US' });
+      message.success(`已将 ${code} (${name}) 加入自选股`);
+    } catch (err) {
+      message.error(errDetail(err, '添加自选失败'));
+    }
+  };
 
   const fetchStatus = async () => {
     try {
@@ -93,6 +134,7 @@ const AIPick: React.FC = () => {
   };
 
   useEffect(() => {
+    fetchWeeklyAlpha();
     fetchStatus();
     fetchHistory();
     fetchSummaries();
@@ -188,7 +230,112 @@ const AIPick: React.FC = () => {
 
   return (
     <div>
-      <h2>🤖 AI选股（Serenity供应链卡点思维 · 仅美股）</h2>
+      <h2>🤖 AI选股</h2>
+
+      {/* ===== 周度美股硬科技选股 · Alpha TOP 5 猛禽池 ===== */}
+      <Card
+        title={
+          <Space align="center" wrap>
+            <RocketOutlined style={{ color: colors.primary, fontSize: 18 }} />
+            <span style={{ fontSize: 16, fontWeight: 'bold' }}>🦅 周度美股硬科技选股 · Alpha TOP 5 猛禽池</span>
+            {weeklyAlpha?.scan_date && (
+              <Tag color="cyan">扫描时间：{weeklyAlpha.scan_date} (全美 {weeklyAlpha.total_scanned} 支硬科技龙头)</Tag>
+            )}
+          </Space>
+        }
+        extra={
+          <Button
+            type="primary"
+            icon={<ReloadOutlined />}
+            onClick={handleScanWeekly}
+            loading={scanningWeekly}
+          >
+            一键全市场量化扫描
+          </Button>
+        }
+        style={{ marginBottom: 20, borderColor: colors.primary, borderRadius: 8 }}
+      >
+        {weeklyAlpha?.ai_thesis && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="🧠 AI 投研总监核心逻辑研判"
+            description={<div style={{ whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.6 }}>{weeklyAlpha.ai_thesis}</div>}
+          />
+        )}
+
+        {weeklyAlpha?.top5 && weeklyAlpha.top5.length > 0 ? (
+          <Row gutter={[16, 16]}>
+            {weeklyAlpha.top5.map((item, idx) => {
+              const rankMedals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+              const rankColors = ['gold', 'geekblue', 'volcano', 'blue', 'cyan'];
+              return (
+                <Col xs={24} sm={12} lg={8} key={item.code} style={{ minWidth: 220 }}>
+                  <Card
+                    size="small"
+                    title={
+                      <Space>
+                        <span style={{ fontSize: 16 }}>{rankMedals[idx] || `#${idx + 1}`}</span>
+                        <b>{item.code}</b>
+                        <Tag color={rankColors[idx]}>{item.name}</Tag>
+                      </Space>
+                    }
+                    extra={
+                      <Tooltip title="加入自选股">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<StarOutlined />}
+                          onClick={() => handleAddWatch(item.code, item.name)}
+                        />
+                      </Tooltip>
+                    }
+                    style={{ height: '100%', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+                  >
+                    <div style={{ marginBottom: 8 }}>
+                      <Tag color="purple" style={{ fontSize: 11 }}>{item.sector}</Tag>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                      <span style={{ color: colors.textSecondary, fontSize: 12 }}>现价</span>
+                      <span style={{ fontSize: 16, fontWeight: 'bold' }}>${item.current_price}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ color: colors.textSecondary, fontSize: 12 }}>量化总分</span>
+                      <Tag color={item.total_score >= 80 ? 'green' : 'blue'} style={{ fontWeight: 'bold', fontSize: 13 }}>
+                        {item.total_score} 分
+                      </Tag>
+                    </div>
+
+                    <div style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 8, lineHeight: 1.6 }}>
+                      <div>动量: <b>{item.momentum_score}</b> | 超跌: <b>{item.sweetspot_score}</b></div>
+                      <div>RSI: <b>{item.rsi}</b> | 模拟胜率: <b style={{ color: item.win_rate >= 60 ? colors.profit : undefined }}>{item.win_rate}%</b></div>
+                    </div>
+
+                    <div style={{ background: colors.bgLight, padding: '6px 8px', borderRadius: 6, fontSize: 11 }}>
+                      <div style={{ color: colors.primary, fontWeight: 600, marginBottom: 2 }}>
+                        💡 线性买入: ${item.linear_buy}
+                      </div>
+                      <div style={{ color: colors.textSecondary }}>
+                        止盈: ${item.linear_profit} (+15%)
+                      </div>
+                      <div style={{ color: colors.textSecondary }}>
+                        止损: ${item.linear_stop} (-8%)
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        ) : (
+          <div style={{ textAlign: 'center', padding: 24, color: colors.textSecondary }}>
+            {loadingWeekly ? <Spin tip="正在读取最新周报数据..." /> : '暂无周度选股数据，请点击右上角「一键全市场量化扫描」'}
+          </div>
+        )}
+      </Card>
 
       {/* ===== 配置状态 ===== */}
       {status && !status.ai_configured && (
