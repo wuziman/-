@@ -23,6 +23,7 @@
 | `WECHAT_WEBHOOK` | 企业微信Webhook URL | 企业微信群机器人 |
 | `NEWSAPI_KEY` | NewsAPI Key | https://newsapi.org/ |
 | `FRED_API_KEY` | FRED API Key | https://fred.stlouisfed.org/ |
+| `GEMINI_API_KEY` | Google Gemini API Key | https://aistudio.google.com/ |
 
 ### 2. 配置企业微信机器人
 

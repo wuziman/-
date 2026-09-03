@@ -11,7 +11,8 @@ API key 只存本地该文件（已在.gitignore），不进代码、不进git�
 """
 
 import logging
-from typing import Dict, List
+import time
+from typing import Dict, List, Optional
 
 import requests
 
@@ -51,7 +52,7 @@ def is_ai_configured() -> bool:
 
 
 def chat_completion(messages: List[Dict], temperature: float = 0.4,
-                    max_tokens: int = 4000) -> str:
+                    max_tokens: int = 4000, model: Optional[str] = None) -> str:
     """调用OpenAI兼容的chat/completions接口，返回assistant文本"""
     c = load_ai_provider_config()
     if not (c['api_key'] and c['model']):
@@ -59,22 +60,41 @@ def chat_completion(messages: List[Dict], temperature: float = 0.4,
             'AI供应商未配置：请在 config/config.json 添加 ai_provider 字段'
             '（base_url/api_key/model），参考README说明')
 
-    resp = requests.post(
-        f"{c['base_url']}/chat/completions",
-        headers={
-            'Authorization': f"Bearer {c['api_key']}",
-            'Content-Type': 'application/json',
-        },
-        json={
-            'model': c['model'],
+    url = f"{c['base_url']}/chat/completions"
+    headers = {
+        'Authorization': f"Bearer {c['api_key']}",
+        'Content-Type': 'application/json',
+    }
+
+    target_model = model or c['model']
+    models_to_try = [target_model]
+    if 'gemini-3.7' in target_model and 'gemini-3.6-flash' not in models_to_try:
+        models_to_try.append('gemini-3.6-flash')
+
+    resp = None
+    for current_model in models_to_try:
+        payload = {
+            'model': current_model,
             'messages': messages,
             'temperature': temperature,
             'max_tokens': max_tokens,
-        },
-        timeout=c['timeout'],
-    )
-    if resp.status_code != 200:
-        raise RuntimeError(f'LLM API返回{resp.status_code}: {resp.text[:300]}')
+        }
+        for attempt in range(2):
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=30)
+                if resp.status_code in (429, 503) and attempt == 0:
+                    time.sleep(1.0)
+                    continue
+                if resp.status_code == 200:
+                    break
+            except Exception:
+                time.sleep(1.0)
+        if resp is not None and resp.status_code == 200:
+            break
+
+    if resp is None or resp.status_code != 200:
+        err_msg = resp.text[:300] if resp is not None else "No response"
+        raise RuntimeError(f'LLM API返回{resp.status_code if resp else "None"}: {err_msg}')
     data = resp.json()
     try:
         choice = data['choices'][0]

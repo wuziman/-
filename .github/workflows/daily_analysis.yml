@@ -12,19 +12,21 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           pip install pandas numpy requests openpyxl yfinance fredapi newsapi-python beautifulsoup4 lxml
 
-      - name: Update stock data
+      - name: Update stock data (optional cache)
         run: python fetch_my_stocks.py
+        continue-on-error: true
 
       - name: Run analysis
         run: python daily_stock_report_unified.py
@@ -34,3 +36,4 @@ jobs:
           # API Keys（在GitHub仓库Settings → Secrets中配置）
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

@@ -63,6 +63,16 @@ def fetch_all_stocks(period='2y'):
             'symbol': 'COHR',
             'name': 'Coherent光学材料',
             'folder': 'COHR_光学材料'
+        },
+        {
+            'symbol': 'NVDA',
+            'name': '英伟达',
+            'folder': 'NVDA_英伟达'
+        },
+        {
+            'symbol': 'AVGO',
+            'name': '博通',
+            'folder': 'AVGO_博通'
         }
     ]
 
