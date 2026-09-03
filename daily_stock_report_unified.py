@@ -429,12 +429,46 @@ def calculate_stock_technical_and_strategies(stock_code: str, stock_name: str):
         nonlinear_stop = nonlinear_buy * 0.92
         nonlinear_profit = nonlinear_buy * 1.46
 
+        # 4. 核心标的财报日历与排雷雷达
+        earnings_info = {
+            'date': None,
+            'days': None,
+            'tag': '',
+            'is_imminent': False
+        }
+        try:
+            cal = stock.calendar
+            ed = None
+            if isinstance(cal, dict) and 'Earnings Date' in cal and cal['Earnings Date']:
+                ed = cal['Earnings Date'][0]
+            elif hasattr(cal, 'get'):
+                ed_list = cal.get('Earnings Date')
+                if ed_list:
+                    ed = ed_list[0]
+            if ed:
+                today = datetime.now().date()
+                ed_date = ed.date() if hasattr(ed, 'date') else ed
+                days = (ed_date - today).days
+                earnings_info['date'] = ed_date.strftime('%Y-%m-%d')
+                earnings_info['days'] = days
+                if days == 0:
+                    earnings_info['tag'] = "🚨【今晚盘后发布财报】期权IV高企，严禁重仓博弈开盲盒！"
+                    earnings_info['is_imminent'] = True
+                elif 0 < days <= 3:
+                    earnings_info['tag'] = f"⚠️【{days}天后发布财报 ({earnings_info['date']})】防范业绩暴击风险"
+                    earnings_info['is_imminent'] = True
+                elif 3 < days <= 14:
+                    earnings_info['tag'] = f"📅【财报倒计时 {days}天】({earnings_info['date']})"
+        except Exception:
+            pass
+
         return {
             'stock_code': stock_code,
             'stock_name': stock_name,
             'current_price': current_price,
             'rsi': rsi,
             'tech_score': tech_score,
+            'earnings': earnings_info,
             'linear': {
                 'buy': linear_buy,
                 'stop': linear_stop,
@@ -517,6 +551,7 @@ def generate_ai_morning_briefing(macro_summary: str, stock_details: list, regime
         f"- {s['stock_code']} {s['stock_name']}: 现价 ${s['current_price']:.2f}, RSI={s['rsi']:.1f}, "
         f"综合评分 {s['total_score']:.1f}, 距线性买点 {s['linear_distance']:.1f}%, 距非线性买点 {s['nonlinear_distance']:.1f}%, 事件: {s['event']}"
         f" | 历史实测: {STOCK_HISTORICAL_PROFILES.get(s['stock_code'], {}).get('stat', '实测中')}"
+        + (f" | 财报雷达: {s.get('earnings', {}).get('tag', '')}" if s.get('earnings', {}).get('tag') else "")
         for s in stock_details
     ])
 
@@ -532,9 +567,20 @@ def generate_ai_morning_briefing(macro_summary: str, stock_details: list, regime
 🟡【波动防守预警】：当前大盘波动率偏高（VIX={regime.get('vix', 0):.1f}），指示风险偏好收缩。建议提示投资者保持防守姿态，建仓仓位建议减半，且必须严格执行 -8% 纪律止损。
 """
 
+    imminent_earnings = [s for s in stock_details if s.get('earnings', {}).get('is_imminent')]
+    earnings_instruction = ""
+    if imminent_earnings:
+        e_lines = [f"- {s['stock_code']} {s['stock_name']}: {s['earnings']['tag']}" for s in imminent_earnings]
+        earnings_instruction = f"""
+📅【重点财报排雷指示】：
+以下标的财报近在眼前，请在【重点异动解读】或【风险与纪律提示】板块作为头条警示：
+{chr(10).join(e_lines)}
+强调财报日前后期权隐含波动率（IV）极高，开盲盒下注盈亏比极差，严禁盲目重仓，建议空仓避开财报窗口期，等待财报后右侧趋势明朗再行决策！
+"""
+
     prompt = f"""
 你是一位华尔街资深科技股与半导体产业链量化投研专家。
-请根据今日自选股技术面状态、真实新闻事件、美联储宏观数据、大盘波动率风控状态以及【历史 2 年实盘回测画像】，为投资者撰写一份企业微信【30秒AI晨报精要】（Message 1/2）。
+请根据今日自选股技术面状态、真实新闻事件、美联储宏观数据、大盘波动率风控状态、财报日历排雷雷达以及【历史 2 年实盘回测画像】，为投资者撰写一份企业微信【30秒AI晨报精要】（Message 1/2）。
 
 【今日市场大盘与监控数据】
 - 大盘风控态势：{regime.get('banner', '')}
@@ -543,6 +589,7 @@ def generate_ai_morning_briefing(macro_summary: str, stock_details: list, regime
 {stocks_text}
 
 {circuit_breaker_instruction}
+{earnings_instruction}
 
 【撰写规范】
 1. 语言专业犀利，符合顶级科技投资晨会口吻，排版使用优雅的 Markdown 格式；
@@ -550,7 +597,7 @@ def generate_ai_morning_briefing(macro_summary: str, stock_details: list, regime
 3. 包含以下三个核心板块：
    - 🌐 **【大盘与宏观风向】**：用2~3句话归纳美联储流动性、大盘波动率（VIX）与科技成长股风险偏好；
    - 🎯 **【重点异动标的解读】**：精选 2~3 只最值得关注或重点规避的标的，给出精辟逻辑与操作建议；
-   - ⚠️ **【风险与纪律提示】**：针对大盘极端波动、SOXL 杠杆损耗、破位止损纪律或避坑标的提出警示。
+   - ⚠️ **【风险与纪律提示】**：针对临近财报暴击风险、大盘极端波动、SOXL 杠杆损耗、破位止损纪律或避坑标的提出警示。
 4. 全文控制在 400~550 字以内，不要输出任何系统开场白或客套话。
 """
     try:
@@ -562,7 +609,7 @@ def generate_ai_morning_briefing(macro_summary: str, stock_details: list, regime
 
 
 def format_strategy_matrix(results: list, is_degraded: bool, regime: dict) -> str:
-    """生成 Message 2：量化双策略点位表（带大盘熔断风控指示与历史真实回测画像）"""
+    """生成 Message 2：量化双策略点位表（带大盘熔断风控指示、财报雷达与历史真实回测画像）"""
     sorted_results = sorted(results, key=lambda x: x['total_score'], reverse=True)
     report = []
     report.append(f"**【量化双策略点位表】** {datetime.now().strftime('%m-%d %H:%M')}")
@@ -584,7 +631,12 @@ def format_strategy_matrix(results: list, is_degraded: bool, regime: dict) -> st
         profile = STOCK_HISTORICAL_PROFILES.get(code, {'badge': '', 'stat': ''})
         badge_str = f" | {profile['badge']}" if profile['badge'] else ""
 
+        earnings = res.get('earnings', {})
+        earnings_tag = earnings.get('tag', '')
+
         report.append(f"### {i}. {code} {name} {icon}{rec} (`{score:.1f}分`){badge_str}")
+        if earnings_tag:
+            report.append(f"- 📅 **财报雷达**: `{earnings_tag}`")
         stat_line = f" | 实测: `{profile['stat']}`" if profile['stat'] else ""
         report.append(f"- 现价 **${price:.2f}** (技`{res['tech_score']:.1f}` 新`{res['news_score']:.1f}` 宏`{res['macro_score']:.1f}`){stat_line}")
         report.append(f"- 💡 **线性**: 买入 **${linear['buy']:.2f}** (-{res['linear_distance']:.1f}%) | 止盈 ${linear['profit']:.2f} (+15%) | 止损 ${linear['stop']:.2f} (-8%)")
@@ -658,7 +710,8 @@ def main():
                 res = tech_futures[code].result()
                 if res:
                     tech_results.append(res)
-                    print(f"  [OK] 技术面完成: {code} ({name}) 现价=${res['current_price']:.2f}", flush=True)
+                    e_tag = f" | {res['earnings']['tag']}" if res.get('earnings', {}).get('tag') else ""
+                    print(f"  [OK] 技术面完成: {code} ({name}) 现价=${res['current_price']:.2f}{e_tag}", flush=True)
             except Exception as e:
                 print(f"  [FAIL] 技术面异常 {code}: {e}", flush=True)
 
@@ -708,6 +761,13 @@ def main():
         elif regime.get('status') == 'CAUTION' and "买入" in rec:
             rec = "谨慎建仓"
             icon = "🟡"
+
+        # 核心标的财报临近排雷保护
+        earnings_info = item.get('earnings', {})
+        if earnings_info.get('is_imminent'):
+            if "买入" in rec:
+                rec = "财报避险"
+                icon = "⚠️"
 
         item['news_score'] = news_s
         item['macro_score'] = macro_s

@@ -68,8 +68,8 @@ def chat_completion(messages: List[Dict], temperature: float = 0.4,
 
     target_model = model or c['model']
     models_to_try = [target_model]
-    # 多模型智能容灾梯队：当 3.7 达到每日 20 次免费上限时，自动向下无缝补位
-    for fb in ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-2.0-flash']:
+    # 多模型智能容灾梯队：当 3.7 达到每日上限时，自动向下无缝补位
+    for fb in ['gemini-2.5-flash', 'gemini-3.6-flash']:
         if fb not in models_to_try:
             models_to_try.append(fb)
 
