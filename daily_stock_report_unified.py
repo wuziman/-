@@ -188,6 +188,64 @@ def fetch_macro_data(fred_key: str):
     return macro_score, summary, degraded
 
 
+def fetch_market_regime_and_circuit_breaker() -> dict:
+    """
+    监控大盘黑天鹅风险与波动率熔断状态：
+    1. ^VIX (恐慌指数):
+       - < 20: 🟢 常态温和 (Normal，做多环境良好)
+       - 20 ~ 28: 🟡 波动防守预警 (Caution: 买点下移2%，仓位减半防守)
+       - >= 28: 🔴 极端恐慌/黑天鹅熔断 (Circuit Breaker: 全面冻结买入，禁止接飞刀)
+    2. QQQ (纳斯达克100 ETF 单日涨跌幅):
+       - 单日跌幅 <= -2.5%: 强制触发熔断避险
+    """
+    regime = {
+        'status': 'NORMAL',          # 'NORMAL', 'CAUTION', 'CIRCUIT_BREAKER'
+        'level': 0,                  # 0: 常态, 1: 预警, 2: 熔断
+        'vix': 15.0,
+        'qqq_change': 0.0,
+        'banner': '🟢 市场环境健康 (VIX 15.0 | 纳指平稳)',
+        'advice': '量化策略正常运行，按计划挂单'
+    }
+    try:
+        # 获取 VIX
+        vix_ticker = yf.Ticker("^VIX")
+        vix_hist = vix_ticker.history(period="5d")
+        if vix_hist is not None and not vix_hist.empty:
+            regime['vix'] = float(vix_hist['Close'].iloc[-1])
+
+        # 获取 QQQ
+        qqq_ticker = yf.Ticker("QQQ")
+        qqq_hist = qqq_ticker.history(period="5d")
+        if qqq_hist is not None and len(qqq_hist) >= 2:
+            c1 = qqq_hist['Close'].iloc[-1]
+            c0 = qqq_hist['Close'].iloc[-2]
+            regime['qqq_change'] = float(((c1 - c0) / c0) * 100)
+
+        vix = regime['vix']
+        qqq_chg = regime['qqq_change']
+
+        # 熔断判定逻辑
+        if vix >= 28.0 or qqq_chg <= -2.5:
+            regime['status'] = 'CIRCUIT_BREAKER'
+            regime['level'] = 2
+            regime['banner'] = f"🚨 市场熔断避险 (恐慌指数 VIX={vix:.1f} | 纳指 {qqq_chg:+.2f}%)"
+            regime['advice'] = "市场遭遇系统性抛压，已全面冻结左侧买入，严禁逆势接飞刀！"
+        elif vix >= 20.0 or qqq_chg <= -1.5:
+            regime['status'] = 'CAUTION'
+            regime['level'] = 1
+            regime['banner'] = f"🟡 波动防守预警 (恐慌指数 VIX={vix:.1f} | 纳指 {qqq_chg:+.2f}%)"
+            regime['advice'] = "市场振幅剧烈，建议买点下移2%深幅埋伏，持仓仓位减半防守"
+        else:
+            regime['status'] = 'NORMAL'
+            regime['level'] = 0
+            regime['banner'] = f"🟢 市场环境健康 (恐慌指数 VIX={vix:.1f} | 纳指 {qqq_chg:+.2f}%)"
+            regime['advice'] = "宏观与波动率适宜，按量化策略正常伏击建仓"
+    except Exception as e:
+        print(f"[Regime] 市场波动率获取异常: {e}")
+
+    return regime
+
+
 def fetch_news_and_evaluate_sentiment(stocks: list, newsapi_key: str):
     """抓取各标的新闻并通过 Gemini 3.7 Flash 进行语义情感打分"""
     news_dict = {}
@@ -450,8 +508,8 @@ STOCK_HISTORICAL_PROFILES = {
 }
 
 
-def generate_ai_morning_briefing(macro_summary: str, stock_details: list) -> str:
-    """由 Gemini 3.7 Flash 生成 Message 1：30秒AI晨报与投研精要"""
+def generate_ai_morning_briefing(macro_summary: str, stock_details: list, regime: dict) -> str:
+    """由 Gemini 3.7 Flash 生成 Message 1：30秒AI晨报与投研精要（结合大盘熔断风控状态）"""
     if not (is_ai_configured and is_ai_configured() and chat_completion):
         return f"**【AI 晨报与投研精要】** {datetime.now().strftime('%m-%d %H:%M')}\n\n⚠️ 大模型尚未配置，宏观风向参考：{macro_summary}"
 
@@ -462,22 +520,37 @@ def generate_ai_morning_briefing(macro_summary: str, stock_details: list) -> str
         for s in stock_details
     ])
 
+    regime_status = regime.get('status', 'NORMAL')
+    circuit_breaker_instruction = ""
+    if regime_status == 'CIRCUIT_BREAKER':
+        circuit_breaker_instruction = f"""
+⚠️【最高优先级熔断警报】：当前美股大盘触发极端【黑天鹅熔断保护】（VIX={regime.get('vix', 0):.1f}，纳指 {regime.get('qqq_change', 0):+.2f}%）！
+市场遭遇泥沙俱下的系统性抛压。请在晨报第一板块以极其严厉、清醒的专业口吻通报大盘黑天鹅风险，严禁推荐任何个股左侧抄底！指导投资者空仓或现金为王，切忌盲目接下坠飞刀！
+"""
+    elif regime_status == 'CAUTION':
+        circuit_breaker_instruction = f"""
+🟡【波动防守预警】：当前大盘波动率偏高（VIX={regime.get('vix', 0):.1f}），指示风险偏好收缩。建议提示投资者保持防守姿态，建仓仓位建议减半，且必须严格执行 -8% 纪律止损。
+"""
+
     prompt = f"""
 你是一位华尔街资深科技股与半导体产业链量化投研专家。
-请根据今日自选股技术面状态、真实新闻事件、美联储宏观数据以及【历史 2 年实盘回测画像】，为投资者撰写一份企业微信【30秒AI晨报精要】（Message 1/2）。
+请根据今日自选股技术面状态、真实新闻事件、美联储宏观数据、大盘波动率风控状态以及【历史 2 年实盘回测画像】，为投资者撰写一份企业微信【30秒AI晨报精要】（Message 1/2）。
 
-【今日市场与监控数据】
+【今日市场大盘与监控数据】
+- 大盘风控态势：{regime.get('banner', '')}
 - 宏观流动性环境：{macro_summary}
 - 自选股监控与历史实测一览：
 {stocks_text}
+
+{circuit_breaker_instruction}
 
 【撰写规范】
 1. 语言专业犀利，符合顶级科技投资晨会口吻，排版使用优雅的 Markdown 格式；
 2. 结合各标的历史 2 年量化实测战绩（如 LITE/COHR 累计收益超 500% 的冠军成色，以及 NKE 历史负期望的避坑提示）；
 3. 包含以下三个核心板块：
-   - 🌐 **【大盘与宏观风向】**：用2~3句话归纳美联储流动性与科技成长股风险偏好；
+   - 🌐 **【大盘与宏观风向】**：用2~3句话归纳美联储流动性、大盘波动率（VIX）与科技成长股风险偏好；
    - 🎯 **【重点异动标的解读】**：精选 2~3 只最值得关注或重点规避的标的，给出精辟逻辑与操作建议；
-   - ⚠️ **【风险与纪律提示】**：针对 SOXL 杠杆损耗、破位止损纪律或避坑标的提出警示。
+   - ⚠️ **【风险与纪律提示】**：针对大盘极端波动、SOXL 杠杆损耗、破位止损纪律或避坑标的提出警示。
 4. 全文控制在 400~550 字以内，不要输出任何系统开场白或客套话。
 """
     try:
@@ -488,11 +561,13 @@ def generate_ai_morning_briefing(macro_summary: str, stock_details: list) -> str
         return f"**【AI 晨报与投研精要】** {datetime.now().strftime('%m-%d %H:%M')}\n\n⚠️ 生成异常: {e}\n宏观风向: {macro_summary}"
 
 
-def format_strategy_matrix(results: list, is_degraded: bool) -> str:
-    """生成 Message 2：量化双策略点位表（带历史真实回测画像）"""
+def format_strategy_matrix(results: list, is_degraded: bool, regime: dict) -> str:
+    """生成 Message 2：量化双策略点位表（带大盘熔断风控指示与历史真实回测画像）"""
     sorted_results = sorted(results, key=lambda x: x['total_score'], reverse=True)
     report = []
     report.append(f"**【量化双策略点位表】** {datetime.now().strftime('%m-%d %H:%M')}")
+    report.append(f"> 🛡️ **大盘风控状态**: {regime.get('banner', '')}")
+    report.append(f"> 📌 **量化执行指令**: {regime.get('advice', '')}\n")
     if is_degraded:
         report.append("> ⚠️ 注：部分外部 API 延迟，已启动规则降级保障。\n")
 
@@ -555,19 +630,26 @@ def main():
     print(f"\n[1/3] [并发加速] 开始多线程并发获取数据（共 {len(stocks)} 支标的）...", flush=True)
     t0 = time.time()
 
-    with ThreadPoolExecutor(max_workers=14) as executor:
+    with ThreadPoolExecutor(max_workers=16) as executor:
         # 并发任务 1: FRED 宏观流动性
         macro_future = executor.submit(fetch_macro_data, fred_key)
 
-        # 并发任务 2: 8只股票并发拉取技术指标与双策略点位
+        # 并发任务 2: 大盘黑天鹅与波动率熔断风控 (VIX + QQQ)
+        regime_future = executor.submit(fetch_market_regime_and_circuit_breaker)
+
+        # 并发任务 3: 全股票并发拉取技术指标与双策略点位
         tech_futures = {code: executor.submit(calculate_stock_technical_and_strategies, code, name) for code, name in stocks}
 
-        # 并发任务 3: 新闻并发拉取与大模型评估
+        # 并发任务 4: 新闻并发拉取与大模型评估
         news_future = executor.submit(fetch_news_and_evaluate_sentiment, stocks, news_key)
 
         # 收集宏观结果
         macro_score, macro_summary, macro_degraded = macro_future.result()
         print(f"  [OK] 宏观面完成: 利率基准 {macro_score}/10 | {macro_summary}", flush=True)
+
+        # 收集风控态势结果
+        regime = regime_future.result()
+        print(f"  [OK] 风控态势完成: {regime['banner']}", flush=True)
 
         # 收集技术面结果（保持原股票列表顺序）
         tech_results = []
@@ -619,6 +701,14 @@ def main():
             rec = "不建议买入"
             icon = "🔴"
 
+        # 大盘黑天鹅熔断与防守降级保护
+        if regime.get('status') == 'CIRCUIT_BREAKER':
+            rec = "避险"
+            icon = "🔴"
+        elif regime.get('status') == 'CAUTION' and "买入" in rec:
+            rec = "谨慎建仓"
+            icon = "🟡"
+
         item['news_score'] = news_s
         item['macro_score'] = macro_s
         item['event_score'] = event_s
@@ -632,8 +722,8 @@ def main():
 
     # 5. 生成报告
     print("\n[4/4] 生成分段晨报 (AI 晨报精要 + 量化策略矩阵)...")
-    message_1_briefing = generate_ai_morning_briefing(macro_summary, full_results)
-    message_2_matrix = format_strategy_matrix(full_results, is_degraded)
+    message_1_briefing = generate_ai_morning_briefing(macro_summary, full_results, regime)
+    message_2_matrix = format_strategy_matrix(full_results, is_degraded, regime)
 
     # 保存报告至本地 reports 目录
     report_dir = Path("reports")
