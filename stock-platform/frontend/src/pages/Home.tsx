@@ -15,7 +15,7 @@ import dayjs from 'dayjs';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../services/echarts';
 import { portfolioApi, stockApi, reportApi, errDetail } from '../services/api';
-import type { EarningsItem, PositionSummary, WatchlistItem } from '../types/api';
+import type { EarningsItem, MarketRegimeResponse, PositionSummary, WatchlistItem } from '../types/api';
 import { scheduleApi } from '../services/scheduleApi';
 import { colors } from '../theme/tokens';
 
@@ -32,6 +32,9 @@ const Home: React.FC = () => {
   // 自选股行情（渐进填充，失败显示'--'）
   const [wlQuotes, setWlQuotes] = useState<Record<string, { price: number | null; change_pct: number | null }>>({});
   const navigate = useNavigate();
+
+  // ---------- 宏观大盘风控与熔断 ----------
+  const [marketRegime, setMarketRegime] = useState<MarketRegimeResponse | null>(null);
 
   // ---------- 定时自动日报 ----------
   const [schedEnabled, setSchedEnabled] = useState(false);
@@ -85,6 +88,10 @@ const Home: React.FC = () => {
     fetchData();
     fetchSchedule();
     fetchQuotes();
+    // 宏观大盘风控态势与黑天鹅熔断状态
+    stockApi.getMarketRegime()
+      .then((res) => setMarketRegime(res.data))
+      .catch(() => {});
     // 财报日历加载失败不影响仪表盘主数据（美股逐只查询较慢，静默降级）
     stockApi.getEarningsCalendar()
       .then((res) => setEarningsItems(res.data.items || []))
@@ -245,6 +252,29 @@ const Home: React.FC = () => {
           </Button>
         </Space>
       </Row>
+
+      {/* 宏观大盘风控与黑天鹅熔断态势 */}
+      {marketRegime && (
+        <Alert
+          style={{ marginTop: 12, marginBottom: 16, borderRadius: 8 }}
+          type={marketRegime.status === 'CIRCUIT_BREAKER' ? 'error' : marketRegime.status === 'CAUTION' ? 'warning' : 'success'}
+          showIcon
+          message={<span style={{ fontWeight: 600, fontSize: 14 }}>{marketRegime.banner}</span>}
+          description={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 8 }}>
+              <span>📌 <b>量化风控指令</b>：{marketRegime.advice}</span>
+              <Space>
+                <Tag color={marketRegime.vix >= 28 ? 'red' : marketRegime.vix >= 20 ? 'orange' : 'green'}>
+                  VIX: {marketRegime.vix}
+                </Tag>
+                <Tag color={marketRegime.qqq_change < 0 ? 'red' : 'green'}>
+                  纳指QQQ: {marketRegime.qqq_change > 0 ? '+' : ''}{marketRegime.qqq_change}%
+                </Tag>
+              </Space>
+            </div>
+          }
+        />
+      )}
 
       {loadErrors.summary && (
         <Alert

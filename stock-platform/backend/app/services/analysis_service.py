@@ -142,6 +142,54 @@ class AnalysisService:
         # 确定推荐等级
         recommendation = self._get_recommendation(total_score)
 
+        # 核心标的财报日历与排雷雷达
+        earnings_radar = {
+            'date': None,
+            'days_away': None,
+            'tag': '',
+            'is_imminent': False
+        }
+        if market == 'US':
+            try:
+                import yfinance as yf
+                from datetime import date
+                cal = yf.Ticker(stock_code).calendar
+                candidates = None
+                if isinstance(cal, dict):
+                    candidates = cal.get('Earnings Date')
+                elif cal is not None and hasattr(cal, 'to_dict'):
+                    candidates = cal.to_dict().get('Earnings Date')
+                if candidates:
+                    today = date.today()
+                    normalized = []
+                    for d in candidates:
+                        try:
+                            normalized.append(d.date() if callable(getattr(d, 'date', None)) else d)
+                        except Exception:
+                            continue
+                    future = [d for d in normalized if isinstance(d, date) and d >= today]
+                    if future:
+                        nxt = min(future)
+                        days = (nxt - today).days
+                        earnings_radar['date'] = nxt.isoformat()
+                        earnings_radar['days_away'] = days
+                        if days == 0:
+                            earnings_radar['tag'] = "🚨【今晚盘后发布财报】期权波动率暴增，严禁左侧重仓博弈！"
+                            earnings_radar['is_imminent'] = True
+                        elif 0 < days <= 3:
+                            earnings_radar['tag'] = f"⚠️【{days}天后发布财报 ({nxt.isoformat()})】防范业绩暴击风险"
+                            earnings_radar['is_imminent'] = True
+                        elif 3 < days <= 14:
+                            earnings_radar['tag'] = f"📅【财报倒计时 {days}天】({nxt.isoformat()})"
+            except Exception as e:
+                print(f"[Earnings Radar] 获取 {stock_code} 异常: {e}")
+
+        # 若财报临近（今晚或3天内），启动风控降级保护
+        if earnings_radar['is_imminent'] and recommendation.get('action') == '买入':
+            recommendation['level'] = "财报避险"
+            recommendation['action'] = "观望"
+            recommendation['confidence'] = "高"
+
         # 计算三策略点位（线性/非线性/MACD）
         price_levels = self._calculate_both_strategies(df_with_indicators, latest, market)
 
@@ -157,6 +205,7 @@ class AnalysisService:
                 'total': round(total_score, 1)
             },
             'recommendation': recommendation,
+            'earnings_radar': earnings_radar,
             'price_levels': price_levels,
             'details': {
                 'technical': tech_details,

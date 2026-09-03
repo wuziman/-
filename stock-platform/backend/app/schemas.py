@@ -32,6 +32,21 @@ class AnalysisRequest(BaseModel):
     mode: str = "simple"  # simple or research
 
 
+class EarningsRadar(BaseModel):
+    date: Optional[str] = None
+    days_away: Optional[int] = None
+    tag: str = ""
+    is_imminent: bool = False
+
+
+class MarketRegimeResponse(BaseModel):
+    vix: float
+    qqq_change: float
+    status: str
+    banner: str
+    advice: str
+
+
 class AnalysisResponse(BaseModel):
     stock_code: str
     stock_name: str
@@ -39,6 +54,7 @@ class AnalysisResponse(BaseModel):
     recommendation: Dict[str, str]
     price_levels: Dict[str, Any]
     details: Dict[str, Any]
+    earnings_radar: Optional[EarningsRadar] = None
 
 
 # 持仓

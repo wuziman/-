@@ -7,6 +7,7 @@ import type {
   EquityCurveResponse,
   HistoryItem,
   KlineBar,
+  MarketRegimeResponse,
   OptimizeResult,
   Position,
   PositionSummary,
@@ -52,6 +53,10 @@ export const stockApi = {
   // 自选股财报日历（美股yfinance；A股拿不到则日期为空）
   getEarningsCalendar: () =>
     api.get<{ items: EarningsItem[]; no_data: Array<{ stock_code: string; stock_name: string }> }>('/stocks/earnings-calendar'),
+
+  // 大盘宏观波动率与黑天鹅熔断态势 (VIX + QQQ)
+  getMarketRegime: () =>
+    api.get<MarketRegimeResponse>('/stocks/market-regime'),
 
   addToWatchlist: (data: { stock_code: string; stock_name: string; market: string }) =>
     api.post<WatchlistItem>('/stocks/watchlist', data),

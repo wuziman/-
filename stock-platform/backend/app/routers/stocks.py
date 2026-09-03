@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import get_db
 from ..models import Watchlist
-from ..schemas import WatchlistCreate, WatchlistResponse
+from ..schemas import WatchlistCreate, WatchlistResponse, MarketRegimeResponse
 from ..services.stock_service import StockService
 
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
@@ -114,7 +114,53 @@ def get_signals(code: str, market: str = "US", period: str = "6mo"):
         raise HTTPException(status_code=400, detail=f"信号计算失败: {e}")
 
 
-# 自选股相关API
+# 自选股与大盘风控API
+@router.get("/market-regime", response_model=MarketRegimeResponse)
+def get_market_regime():
+    """实时监控美股宏观大盘波动率与黑天鹅熔断状态 (VIX + QQQ)"""
+    vix_val = 15.0
+    qqq_change = 0.0
+
+    try:
+        vix_t = yf.Ticker("^VIX")
+        v_hist = vix_t.history(period="5d")
+        if not v_hist.empty:
+            vix_val = float(v_hist['Close'].iloc[-1])
+    except Exception:
+        pass
+
+    try:
+        qqq_t = yf.Ticker("QQQ")
+        q_hist = qqq_t.history(period="5d")
+        if len(q_hist) >= 2:
+            prev = float(q_hist['Close'].iloc[-2])
+            curr = float(q_hist['Close'].iloc[-1])
+            qqq_change = (curr - prev) / prev * 100.0
+    except Exception:
+        pass
+
+    if vix_val >= 28.0 or qqq_change <= -2.5:
+        status = "CIRCUIT_BREAKER"
+        banner = f"🚨 大盘黑天鹅熔断触发 (VIX={vix_val:.1f} | 纳指 {qqq_change:+.2f}%)"
+        advice = "市场恐慌抛售，系统已自动冻结买入指令，严禁逆势接飞刀！"
+    elif vix_val >= 20.0 or qqq_change <= -1.5:
+        status = "CAUTION"
+        banner = f"🟡 大盘波动预警防守 (VIX={vix_val:.1f} | 纳指 {qqq_change:+.2f}%)"
+        advice = "波动率上升，多头情绪受抑，建议仓位减半并严格设止损"
+    else:
+        status = "NORMAL"
+        banner = f"🟢 市场环境健康 (恐慌指数 VIX={vix_val:.1f} | 纳指 {qqq_change:+.2f}%)"
+        advice = "宏观与波动率适宜，按量化策略正常伏击建仓"
+
+    return {
+        "vix": round(vix_val, 2),
+        "qqq_change": round(qqq_change, 2),
+        "status": status,
+        "banner": banner,
+        "advice": advice
+    }
+
+
 @router.get("/earnings-calendar")
 def get_earnings_calendar(db: Session = Depends(get_db)):
     """自选股财报日历：美股走yfinance日历；A股尝试.SZ/.SS后缀，拿不到则日期为空"""

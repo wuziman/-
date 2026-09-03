@@ -140,6 +140,21 @@ export interface AnalysisDetails {
   };
 }
 
+export interface MarketRegimeResponse {
+  vix: number;
+  qqq_change: number;
+  status: 'NORMAL' | 'CAUTION' | 'CIRCUIT_BREAKER' | string;
+  banner: string;
+  advice: string;
+}
+
+export interface EarningsRadar {
+  date: string | null;
+  days_away: number | null;
+  tag: string;
+  is_imminent: boolean;
+}
+
 export interface AnalysisResult {
   stock_code: string;
   stock_name: string;
@@ -156,6 +171,7 @@ export interface AnalysisResult {
     action: string;
     confidence: string;
   };
+  earnings_radar?: EarningsRadar;
   price_levels: {
     current_price: number | null;
     linear: PriceLevels;

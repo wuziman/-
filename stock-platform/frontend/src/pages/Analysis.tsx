@@ -630,6 +630,28 @@ const Analysis: React.FC = () => {
           <Col xs={24} lg={8}>
             {analysisResult ? (
               <>
+                {analysisResult.earnings_radar?.tag && (
+                  <Alert
+                    style={{ marginBottom: 16, borderRadius: 8 }}
+                    type={analysisResult.earnings_radar.is_imminent ? 'error' : 'warning'}
+                    showIcon
+                    message={
+                      <span style={{ fontWeight: 'bold' }}>
+                        {analysisResult.earnings_radar.is_imminent ? '🚨 财报重大排雷警报' : '📅 财报日程提示'}
+                      </span>
+                    }
+                    description={
+                      <div style={{ marginTop: 4 }}>
+                        <div style={{ fontWeight: 600 }}>{analysisResult.earnings_radar.tag}</div>
+                        {analysisResult.earnings_radar.is_imminent && (
+                          <div style={{ marginTop: 4, fontSize: 12, color: colors.textSecondary }}>
+                            💡 <b>量化风控建议</b>：财报前夕期权隐含波动率（IV）极高，股价易出现双向剧烈跳空，开盲盒博弈期望值为负。建议严禁左侧重仓，待业绩靴子落地后再做右侧交易！
+                          </div>
+                        )}
+                      </div>
+                    }
+                  />
+                )}
                 <Card title="📊 综合评分" style={{ marginBottom: 16 }}>
                   <div style={{ textAlign: 'center', marginBottom: 16 }}>
                     <Progress
