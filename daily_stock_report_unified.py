@@ -349,6 +349,11 @@ def calculate_stock_technical_and_strategies(stock_code: str, stock_name: str):
             else:
                 return None
 
+        # 剔除盘前空占位行或未完成蜡烛
+        data = data.dropna(subset=['Close'])
+        if data.empty:
+            return None
+
         # 计算技术指标
         delta = data['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()

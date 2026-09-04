@@ -170,7 +170,10 @@ def analyze_candidate(stock_meta: dict) -> dict:
         t = yf.Ticker(code)
         # 获取 6 个月历史计算指标与回测
         hist = t.history(period="6mo")
-        if hist is None or len(hist) < 35:
+        if hist is None or hist.empty:
+            return None
+        hist = hist.dropna(subset=['Close'])
+        if len(hist) < 35:
             return None
 
         # 计算基础指标

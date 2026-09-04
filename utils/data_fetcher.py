@@ -54,6 +54,12 @@ class USStockDataFetcher:
                 print(f"警告: 未获取到 {symbol} 的数据")
                 return pd.DataFrame()
 
+            # 过滤盘前空占位行
+            df = df.dropna(subset=['Close'])
+            if df.empty:
+                print(f"警告: {symbol} 数据有效收盘价为空")
+                return pd.DataFrame()
+
             # 添加股票代码列
             df['Symbol'] = symbol
             df.index.name = 'Date'
