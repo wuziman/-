@@ -417,4 +417,42 @@ export interface WeeklyAlphaResponse {
   total_scanned: number;
   top5: WeeklyAlphaItem[];
   ai_thesis: string;
+  battle_report?: BattleReport | null;
+}
+
+export interface BattlePickReview {
+  code: string;
+  name: string;
+  sector: string;
+  entry_price: number;
+  review_price: number;
+  weekly_return_pct: number;
+  is_winner: boolean;
+}
+
+export interface BattleReport {
+  prev_scan_date: string;
+  review_date: string;
+  picks: BattlePickReview[];
+  win_count: number;
+  loss_count: number;
+  win_rate: number;
+  avg_return_pct: number;
+  best_pick: { code: string; name: string; return_pct: number };
+  worst_pick: { code: string; name: string; return_pct: number };
+}
+
+export interface WeeklyHistoryResponse {
+  weeks: Array<{
+    scan_date: string;
+    top5: Array<{ code: string; name: string; sector: string; total_score: number; current_price: number }>;
+    battle_report?: BattleReport | null;
+  }>;
+  cumulative: {
+    total_weeks: number;
+    total_picks: number;
+    overall_win_rate: number;
+    avg_return_pct: number;
+    total_winners: number;
+  } | null;
 }

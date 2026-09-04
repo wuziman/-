@@ -172,3 +172,39 @@ def trigger_weekly_scan():
         return run_screener()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"选股扫描失败: {e}")
+
+
+@router.get("/top5/history")
+def get_weekly_history():
+    """获取猛禽池累积历史战报"""
+    import json
+    from pathlib import Path
+    history_file = Path(__file__).resolve().parent.parent.parent.parent / "data" / "weekly_alpha_history.json"
+    if history_file.exists():
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                weeks = json.load(f)
+            # 计算累积统计
+            total_weeks = sum(1 for w in weeks if w.get('battle_report'))
+            all_picks = []
+            for w in weeks:
+                br = w.get('battle_report')
+                if br and br.get('picks'):
+                    all_picks.extend(br['picks'])
+            total_picks = len(all_picks)
+            total_winners = sum(1 for p in all_picks if p.get('is_winner'))
+            overall_win_rate = round(total_winners / total_picks * 100, 1) if total_picks else 0
+            avg_return = round(sum(p['weekly_return_pct'] for p in all_picks) / total_picks, 2) if total_picks else 0
+            return {
+                'weeks': weeks,
+                'cumulative': {
+                    'total_weeks': total_weeks,
+                    'total_picks': total_picks,
+                    'overall_win_rate': overall_win_rate,
+                    'avg_return_pct': avg_return,
+                    'total_winners': total_winners,
+                }
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"读取历史战报失败: {e}")
+    return {'weeks': [], 'cumulative': None}

@@ -356,6 +356,11 @@ def run_screener():
         print(f"  TOP {rank}: {item['code']} {item['name']} | 赛道: {item['sector']} | 量化总分: {item['total_score']}分 (现价=${item['current_price']})")
 
     # ----------------------------------------------------
+    # 3.5 回测上期猛禽池战绩
+    # ----------------------------------------------------
+    battle_report = review_previous_picks()
+
+    # ----------------------------------------------------
     # 4. Gemini 3.7 Flash 深度投资逻辑研判
     # ----------------------------------------------------
     ai_thesis = generate_ai_thesis(top5)
@@ -367,7 +372,8 @@ def run_screener():
         'scan_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'total_scanned': len(results),
         'top5': top5,
-        'ai_thesis': ai_thesis
+        'ai_thesis': ai_thesis,
+        'battle_report': battle_report,
     }
 
     data_dir = BASE_DIR / 'data'
@@ -377,10 +383,13 @@ def run_screener():
         json.dump(payload, f, ensure_ascii=False, indent=2)
     print(f"\n📁 选股结果已保存至: {output_json}")
 
+    # 归档至历史记录
+    archive_to_history(payload, data_dir)
+
     # ----------------------------------------------------
     # 6. 生成微信周度选股周报并推送
     # ----------------------------------------------------
-    wechat_report = format_wechat_weekly_report(top5, ai_thesis)
+    wechat_report = format_wechat_weekly_report(top5, ai_thesis, battle_report)
     report_dir = BASE_DIR / 'reports'
     report_dir.mkdir(exist_ok=True)
     report_file = report_dir / f"weekly_alpha_top5_{datetime.now().strftime('%Y%m%d')}.txt"
@@ -396,6 +405,107 @@ def run_screener():
         print("⚠️ 企业微信推送未触发或失败")
 
     return payload
+
+
+# ----------------------------------------------------
+# 4. 上期猛禽池战绩回测与归因
+# ----------------------------------------------------
+def review_previous_picks() -> dict | None:
+    """加载上一期 TOP 5，拉取最新价格，计算周度收益归因"""
+    data_dir = BASE_DIR / 'data'
+    prev_file = data_dir / 'weekly_alpha_top5.json'
+    if not prev_file.exists():
+        print("📊 暂无上期猛禽池记录，跳过战绩回测")
+        return None
+
+    try:
+        with open(prev_file, 'r', encoding='utf-8') as f:
+            prev = json.load(f)
+    except Exception:
+        return None
+
+    prev_top5 = prev.get('top5', [])
+    prev_date = prev.get('scan_date', '未知')
+    if not prev_top5:
+        return None
+
+    print(f"\n📊 正在回测上期猛禽池战绩（入选日期: {prev_date}）...")
+    picks_review = []
+    for item in prev_top5:
+        code = item['code']
+        entry_price = item['current_price']
+        try:
+            t = yf.Ticker(code)
+            h = t.history(period='5d')
+            if h is not None and not h.empty:
+                h = h.dropna(subset=['Close'])
+            if h is not None and not h.empty:
+                now_price = float(h['Close'].iloc[-1])
+            else:
+                now_price = entry_price
+        except Exception:
+            now_price = entry_price
+
+        weekly_ret = round((now_price - entry_price) / entry_price * 100, 2)
+        picks_review.append({
+            'code': code,
+            'name': item['name'],
+            'sector': item.get('sector', ''),
+            'entry_price': entry_price,
+            'review_price': round(now_price, 2),
+            'weekly_return_pct': weekly_ret,
+            'is_winner': weekly_ret > 0,
+        })
+
+    winners = [p for p in picks_review if p['is_winner']]
+    losers = [p for p in picks_review if not p['is_winner']]
+    avg_ret = round(sum(p['weekly_return_pct'] for p in picks_review) / len(picks_review), 2)
+    best = max(picks_review, key=lambda x: x['weekly_return_pct'])
+    worst = min(picks_review, key=lambda x: x['weekly_return_pct'])
+
+    report = {
+        'prev_scan_date': prev_date,
+        'review_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'picks': picks_review,
+        'win_count': len(winners),
+        'loss_count': len(losers),
+        'win_rate': round(len(winners) / len(picks_review) * 100, 1),
+        'avg_return_pct': avg_ret,
+        'best_pick': {'code': best['code'], 'name': best['name'], 'return_pct': best['weekly_return_pct']},
+        'worst_pick': {'code': worst['code'], 'name': worst['name'], 'return_pct': worst['weekly_return_pct']},
+    }
+
+    print(f"  上期战绩: 胜率 {report['win_rate']}% ({report['win_count']}胜{report['loss_count']}负) | 等权组合收益 {avg_ret:+.2f}%")
+    print(f"  最强标的: {best['code']} ({best['weekly_return_pct']:+.2f}%) | 最弱标的: {worst['code']} ({worst['weekly_return_pct']:+.2f}%)")
+    return report
+
+
+def archive_to_history(payload: dict, data_dir: Path):
+    """将本期选股结果与战报归档到累积历史文件"""
+    history_file = data_dir / 'weekly_alpha_history.json'
+    history = []
+    if history_file.exists():
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+
+    # 精简存档（不存 ai_thesis 全文，节省空间）
+    entry = {
+        'scan_date': payload['scan_date'],
+        'top5': [
+            {'code': s['code'], 'name': s['name'], 'sector': s['sector'],
+             'total_score': s['total_score'], 'current_price': s['current_price']}
+            for s in payload.get('top5', [])
+        ],
+        'battle_report': payload.get('battle_report'),
+    }
+    history.append(entry)
+
+    with open(history_file, 'w', encoding='utf-8') as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+    print(f"📁 历史战报已归档至: {history_file} (累计 {len(history)} 期)")
 
 
 def generate_ai_thesis(top5: list) -> str:
@@ -430,18 +540,31 @@ def generate_ai_thesis(top5: list) -> str:
         return "AI研报生成中遇到临时延迟，各标的量化点位已就绪。"
 
 
-def format_wechat_weekly_report(top5: list, ai_thesis: str) -> str:
+def format_wechat_weekly_report(top5: list, ai_thesis: str, battle_report: dict = None) -> str:
     """格式化企业微信周度选股消息"""
     now_str = datetime.now().strftime('%m-%d %H:%M')
     lines = [
         f"**【美股硬科技周度选股 · Alpha TOP 5 猛禽池】** {now_str}",
         "> 🦅 **选股定位**: 全市场精选高动量、高胜率、高胜算科技增量标的",
         "> 📌 **池位关系**: 独立于核心10支自选股，提供增量Alpha进攻机会\n",
-        "### 🧠 AI 投研总监深度逻辑",
-        ai_thesis,
-        "\n---",
-        "### 🏆 周度 Alpha TOP 5 量化伏击点位表\n"
     ]
+
+    # 上期战绩卡片（如有）
+    if battle_report:
+        br = battle_report
+        lines.append("### 📊 上期猛禽池战绩复盘\n")
+        lines.append(f"> 入选日期: {br['prev_scan_date']} → 复盘日期: {br['review_date']}")
+        lines.append(f"> **等权组合收益: `{br['avg_return_pct']:+.2f}%`** | 胜率: `{br['win_rate']}%` ({br['win_count']}胜{br['loss_count']}负)")
+        lines.append(f"> 🏆 最强: **{br['best_pick']['code']}** (`{br['best_pick']['return_pct']:+.2f}%`) | 最弱: {br['worst_pick']['code']} (`{br['worst_pick']['return_pct']:+.2f}%`)\n")
+        for p in br.get('picks', []):
+            icon = "🟢" if p['is_winner'] else "🔴"
+            lines.append(f"- {icon} **{p['code']}** {p['name']} | ${p['entry_price']}→${p['review_price']} (`{p['weekly_return_pct']:+.2f}%`)")
+        lines.append("\n---")
+
+    lines.append("### 🧠 AI 投研总监深度逻辑")
+    lines.append(ai_thesis)
+    lines.append("\n---")
+    lines.append("### 🏆 周度 Alpha TOP 5 量化伏击点位表\n")
 
     for i, s in enumerate(top5, 1):
         lines.append(f"### {i}. {s['code']} {s['name']} | `{s['total_score']}分`")

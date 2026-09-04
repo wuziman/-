@@ -337,6 +337,53 @@ const AIPick: React.FC = () => {
         )}
       </Card>
 
+      {/* ===== 上期猛禽池战绩复盘 ===== */}
+      {weeklyAlpha?.battle_report && (
+        <Card
+          title={
+            <span>
+              📊 上期猛禽池战绩复盘
+              <Tag color={weeklyAlpha.battle_report.avg_return_pct >= 0 ? 'green' : 'red'} style={{ marginLeft: 8, fontWeight: 'bold' }}>
+                等权组合: {weeklyAlpha.battle_report.avg_return_pct >= 0 ? '+' : ''}{weeklyAlpha.battle_report.avg_return_pct}%
+              </Tag>
+              <Tag color="blue">
+                胜率: {weeklyAlpha.battle_report.win_rate}% ({weeklyAlpha.battle_report.win_count}胜{weeklyAlpha.battle_report.loss_count}负)
+              </Tag>
+            </span>
+          }
+          style={{ marginBottom: 20, borderRadius: 8 }}
+        >
+          <div style={{ marginBottom: 12, fontSize: 12, color: colors.textSecondary }}>
+            入选日期: {weeklyAlpha.battle_report.prev_scan_date} → 复盘日期: {weeklyAlpha.battle_report.review_date}
+          </div>
+          <Row gutter={[12, 12]}>
+            {weeklyAlpha.battle_report.picks.map((p) => (
+              <Col xs={24} sm={12} lg={8} key={p.code}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '8px 12px', background: colors.bgLight, borderRadius: 6,
+                  borderLeft: `3px solid ${p.is_winner ? '#52c41a' : '#ff4d4f'}`
+                }}>
+                  <div>
+                    <b>{p.code}</b> <span style={{ fontSize: 12, color: colors.textSecondary }}>{p.name}</span>
+                    <div style={{ fontSize: 11, color: colors.textSecondary }}>
+                      ${p.entry_price} → ${p.review_price}
+                    </div>
+                  </div>
+                  <Tag color={p.is_winner ? 'green' : 'red'} style={{ fontWeight: 'bold', fontSize: 13 }}>
+                    {p.weekly_return_pct >= 0 ? '+' : ''}{p.weekly_return_pct}%
+                  </Tag>
+                </div>
+              </Col>
+            ))}
+          </Row>
+          <div style={{ marginTop: 12, fontSize: 12, color: colors.textSecondary }}>
+            🏆 最强: <b style={{ color: '#52c41a' }}>{weeklyAlpha.battle_report.best_pick.code} ({weeklyAlpha.battle_report.best_pick.return_pct >= 0 ? '+' : ''}{weeklyAlpha.battle_report.best_pick.return_pct}%)</b>
+            {' | '}最弱: <b style={{ color: '#ff4d4f' }}>{weeklyAlpha.battle_report.worst_pick.code} ({weeklyAlpha.battle_report.worst_pick.return_pct >= 0 ? '+' : ''}{weeklyAlpha.battle_report.worst_pick.return_pct}%)</b>
+          </div>
+        </Card>
+      )}
+
       {/* ===== 配置状态 ===== */}
       {status && !status.ai_configured && (
         <Alert

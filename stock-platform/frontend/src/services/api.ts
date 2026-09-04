@@ -23,6 +23,7 @@ import type {
   StatusInfo,
   XhsSummaryRow,
   WeeklyAlphaResponse,
+  WeeklyHistoryResponse,
 } from '../types/api';
 
 const api = axios.create({
@@ -203,6 +204,9 @@ export const aiPickApi = {
 
   triggerWeeklyAlphaScan: () =>
     api.post<WeeklyAlphaResponse>('/ai-pick/top5/scan', null, { timeout: 180000 }),
+
+  getWeeklyAlphaHistory: () =>
+    api.get<WeeklyHistoryResponse>('/ai-pick/top5/history'),
 };
 
 export default api;
